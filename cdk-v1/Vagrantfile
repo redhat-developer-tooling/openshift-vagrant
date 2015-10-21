@@ -1,0 +1,235 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Usage:
+#
+# To use this Vagrantfile, you:
+# * Must be connected to internal Red Hat network (FIXME)
+# * Must have 'vagrant-registration' plugin installed
+# * Must have valid RH employee subscription account
+
+# General configuration:
+#
+# URL from where to fetch the Vagrant Virtualbox image
+# FIXME: How to point to the official box image?
+# NOTE:  If you're in US, please use the 'bos' instead of 'brq.
+VAGRANT_BOX_URL="http://download.eng.brq.redhat.com/released/cdk/1.0.1"
+
+# The Docker registry from where we pull the OpenShift Enterprise Docker image
+# from.
+# FIXME: This should be registry.access.redhat.com, waiting for updated image.
+DOCKER_REGISTRY="rcm-img-docker01.build.eng.bos.redhat.com:5001"
+
+# The name of the OpenShift Enterprise image.
+OSE_IMAGE_NAME="openshift3/ose"
+
+# The public IP address the VM created by Vagrant will get.
+# You will use this IP address to connect to OpenShift web console.
+PUBLIC_ADDRESS="10.1.2.2"
+
+Vagrant.configure(2) do |config|
+
+  config.vm.provider "virtualbox" do |v, override|
+    override.vm.box = "cdk_v1"
+    override.vm.box_url = "#{VAGRANT_BOX_URL}/rhel-server-virtualbox-7.1-3.x86_64.box"
+    v.memory = 2048
+    v.cpus   = 2
+    v.customize ["modifyvm", :id, "--cpus", "2"]
+    v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+  end
+
+  config.vm.provider "libvirt" do |v, override|
+    override.vm.box = "cdk_v1"
+    override.vm.box_url = "#{VAGRANT_BOX_URL}/rhel-server-libvirt-7.1-3.x86_64.box"
+    v.driver = "kvm"
+    v.memory = 2048
+    v.cpus   = 2
+  end
+
+  config.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
+
+  SUBSCRIPTION_ERROR = "
+    You have to supply your Red Hat subscription credentials to run this Vagrant box.
+
+    Please run:
+    $ vagrant plugin install vagrant-registration
+
+    Then set these environment variable to your subscription username/password:
+    $ export SUB_USERNAME=rhn-username
+    $ export SUB_PASSWORD=password
+  "
+  unless Vagrant.has_plugin?('vagrant-registration')
+    raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
+  end
+
+  config.registration.username    = ENV['SUB_USERNAME']
+  config.registration.password    = ENV['SUB_PASSWORD']
+  config.registration.auto_attach = true
+
+  if config.registration.username.strip.empty? ||
+     config.registration.password.strip.empty?
+    raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
+  end
+
+  # Update Docker in the CDK image to latest version
+  config.vm.provision "shell", inline: <<-SHELL
+    ( yum repolist | grep -q rhel-7-server-extras-rpms ) && exit 0
+    echo "[INFO] Update Docker to latest version ..."
+    set -e
+    subscription-manager repos --disable="*" &>/dev/null
+    subscription-manager repos --enable="rhel-7-server-rpms" \
+                               --enable="rhel-7-server-extras-rpms"
+    yum update -q -y docker
+    systemctl restart docker
+  SHELL
+
+  # Enable the internal registry and configure the Docker to allow pushing to
+  # internal OpenShift registry
+  config.vm.provision "shell", inline: <<-SHELL
+    grep -q Vagrant /etc/sysconfig/docker && exit 0
+    echo "[INFO] Enable #{DOCKER_REGISTRY} registry ..."
+    cat << EOF > /etc/sysconfig/docker
+# Configured by Vagrant
+DOCKER_CERT_PATH=/etc/docker
+INSECURE_REGISTRY='--insecure-registry #{DOCKER_REGISTRY} --insecure-registry 172.30.0.0/16'
+OPTIONS='--selinux-enabled --storage-opt dm.no_warn_on_loop_devices=true'
+ADD_REGISTRY='--add-registry #{DOCKER_REGISTRY} --add-registry registry.access.redhat.com'
+EOF
+    systemctl restart docker
+  SHELL
+
+  config.vm.provision "shell", inline: <<-SHELL
+    docker inspect openshift3/ose &>/dev/null && exit 0
+    echo "[INFO] Pull the #{OSE_IMAGE_NAME} Docker image ..."
+    docker pull #{DOCKER_REGISTRY}/#{OSE_IMAGE_NAME}
+    docker tag #{DOCKER_REGISTRY}/#{OSE_IMAGE_NAME} openshift3/ose
+  SHELL
+
+  config.vm.provision "shell", inline: <<-SHELL
+    state=$(docker inspect -f "{{.State.Running}}" ose 2>/dev/null)
+    [[ "${state}" == "true" ]] && exit 0
+
+    echo "[INFO] Start the OpenShift server ..."
+
+    # Prepare directories for bind-mounting
+    dirs=(openshift.local.volumes openshift.local.config openshift.local.etcd)
+    for d in ${dirs[@]}; do
+      mkdir -p /var/lib/origin/${d} && chcon -Rt svirt_sandbox_file_t /var/lib/origin/${d}
+    done
+
+    docker run -d --name "ose" --privileged --net=host --pid=host \
+         -v /:/rootfs:ro \
+         -v /var/run:/var/run:rw \
+         -v /sys:/sys:ro \
+         -v /var/lib/docker:/var/lib/docker:rw \
+         -v /var/lib/origin/openshift.local.volumes:/var/lib/origin/openshift.local.volumes:z \
+         -v /var/lib/origin/openshift.local.config:/var/lib/origin/openshift.local.config:z \
+         -v /var/lib/origin/openshift.local.etcd:/var/lib/origin/openshift.local.etcd:z \
+         openshift3/ose start \
+          --master="https://#{PUBLIC_ADDRESS}:8443" \
+          --etcd-dir="/var/lib/origin/openshift.local.etcd"
+
+    sleep 15 # Give OpenShift 15 seconds to start
+
+    state=$(docker inspect -f "{{.State.Running}}" ose)
+    if [[ "${state}" != "true" ]]; then
+      >&2 echo "[ERROR] OpenShift failed to start:"
+      docker logs ose
+      exit 1
+    fi
+  SHELL
+
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "[INFO] Copy the OpenShift client binaries to host ..."
+    binaries=(oc oadm)
+    for n in ${binaries[@]}; do
+      [ -f /usr/bin/${n} ] && continue
+      docker run --rm --entrypoint=/bin/cat openshift3/ose /usr/bin/${n} > /usr/bin/${n}
+      chmod +x /usr/bin/${n}
+    done
+  SHELL
+
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "[INFO] Configure Docker Registry and router ..."
+    master_config_dir=/var/lib/origin/openshift.local.config/master
+
+    export KUBECONFIG=${master_config_dir}/admin.kubeconfig
+    chmod go+rw ${KUBECONFIG}
+    echo "export KUBECONFIG=${KUBECONFIG}" > /etc/profile.d/openshift.sh
+
+    # Create Docker Registry
+    if [ ! -f /var/lib/origin/configured.registry ]; then
+      oadm registry --create --credentials=${master_config_dir}/openshift-registry.kubeconfig
+      touch /var/lib/origin/configured.registry
+    fi
+
+    # For router, we have to create service account first and then use it for
+    # router creation.
+    if [ ! -f /var/lib/origin/configured.router ]; then
+      echo '{"kind":"ServiceAccount","apiVersion":"v1","metadata":{"name":"router"}}' \
+        | oc create -f -
+      oc get scc privileged -o json \
+        | sed '/\"users\"/a \"system:serviceaccount:default:router\",'  \
+        | oc replace scc privileged -f -
+      oadm router --create --credentials=${master_config_dir}/openshift-router.kubeconfig \
+        --service-account=router
+      touch /var/lib/origin/configured.router
+    fi
+  SHELL
+
+  # FIXME: This is pretty ugly, should be refactored to something more smart ;-)
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "[INFO] Download OpenShift and xPaaS templates ..."
+    EXAMPLES_BASE=/opt/openshift/templates
+    [ -d "${EXAMPLES_BASE}" ] && exit 0
+    temp_dir=$(mktemp -d)
+    pushd ${temp_dir} >/dev/null
+    mkdir -p ${EXAMPLES_BASE}/{db-templates,image-streams,quickstart-templates,xpaas-streams,xpaas-templates}
+    curl -sL https://github.com/openshift/origin/archive/master.zip -o origin-master.zip
+    curl -sL https://github.com/openshift/nodejs-ex/archive/master.zip -o nodejs-ex-master.zip
+    curl -sL https://github.com/jboss-openshift/application-templates/archive/master.zip -o application-templates-master.zip
+    unzip -q nodejs-ex-master.zip
+    unzip -q origin-master.zip
+    unzip -q application-templates-master.zip
+    cp origin-master/examples/db-templates/* ${EXAMPLES_BASE}/db-templates/
+    cp origin-master/examples/jenkins/jenkins-*template.json ${EXAMPLES_BASE}/quickstart-templates/
+    cp origin-master/examples/image-streams/* ${EXAMPLES_BASE}/image-streams/
+    cp nodejs-ex-master/openshift/templates/* ${EXAMPLES_BASE}/quickstart-templates/
+    cp -R application-templates-master/* ${EXAMPLES_BASE}/xpaas-templates/
+    mv application-templates-master/jboss-image-streams.json ${EXAMPLES_BASE}/xpaas-streams/
+    rm -f /opt/openshift/templates/image-streams/image-streams-centos7.json
+    popd >/dev/null
+    rm -rf ${temp_dir}
+  SHELL
+
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "[INFO] Install OpenShift templates ..."
+    if [ ! -f /var/lib/origin/configured.templates ]; then
+      for name in $(find /opt/openshift/templates -name '*.json'); do
+        oc create -f $name -n openshift >/dev/null
+      done
+      touch /var/lib/origin/configured.templates
+    fi
+  SHELL
+
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "[INFO] Create 'test-admin' user and 'test' project ..."
+    if [ ! -f /var/lib/origin/configured.user ]; then
+      oadm policy add-role-to-user view test-admin
+      oc login -u test-admin -p test
+      oc new-project test --display-name="OpenShift 3 Sample" \
+        --description="This is an example project to demonstrate OpenShift v3" &>/dev/null
+      oc logout
+      touch /var/lib/origin/configured.user
+    fi
+    echo
+    echo
+    echo "You can now access OpenShift console on: https://#{PUBLIC_ADDRESS}:8443/console"
+    echo
+    echo "To use OpenShift CLI, run:"
+    echo "$ vagrant ssh"
+    echo "$ oc login -u test-admin -p test"
+    echo
+  SHELL
+
+end
