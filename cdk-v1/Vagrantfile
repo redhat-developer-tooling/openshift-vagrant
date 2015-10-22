@@ -187,7 +187,7 @@ EOF
     mkdir -p ${EXAMPLES_BASE}/{db-templates,image-streams,quickstart-templates,xpaas-streams,xpaas-templates}
     curl -sL https://github.com/openshift/origin/archive/master.zip -o origin-master.zip
     curl -sL https://github.com/openshift/nodejs-ex/archive/master.zip -o nodejs-ex-master.zip
-    curl -sL https://github.com/jboss-openshift/application-templates/archive/master.zip -o application-templates-master.zip
+    curl -sL https://github.com/jboss-openshift/application-templates/archive/ose-v1.0.2.zip -o application-templates-master.zip
     unzip -q nodejs-ex-master.zip
     unzip -q origin-master.zip
     unzip -q application-templates-master.zip
