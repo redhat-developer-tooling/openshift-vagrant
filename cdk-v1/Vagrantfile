@@ -27,6 +27,10 @@ OSE_IMAGE_NAME="openshift3/ose"
 # You will use this IP address to connect to OpenShift web console.
 PUBLIC_ADDRESS="10.1.2.2"
 
+# The directory where OpenShift will store the files.
+# This should be "/var/lib/openshift" in case you're not using the :latest tag.
+ORIGIN_DIR="/var/lib/origin"
+
 Vagrant.configure(2) do |config|
 
   config.vm.provider "virtualbox" do |v, override|
@@ -114,7 +118,7 @@ EOF
     # Prepare directories for bind-mounting
     dirs=(openshift.local.volumes openshift.local.config openshift.local.etcd)
     for d in ${dirs[@]}; do
-      mkdir -p /var/lib/origin/${d} && chcon -Rt svirt_sandbox_file_t /var/lib/origin/${d}
+      mkdir -p #{ORIGIN_DIR}/${d} && chcon -Rt svirt_sandbox_file_t #{ORIGIN_DIR}/${d}
     done
 
     docker run -d --name "ose" --privileged --net=host --pid=host \
@@ -122,12 +126,12 @@ EOF
          -v /var/run:/var/run:rw \
          -v /sys:/sys:ro \
          -v /var/lib/docker:/var/lib/docker:rw \
-         -v /var/lib/origin/openshift.local.volumes:/var/lib/origin/openshift.local.volumes:z \
-         -v /var/lib/origin/openshift.local.config:/var/lib/origin/openshift.local.config:z \
-         -v /var/lib/origin/openshift.local.etcd:/var/lib/origin/openshift.local.etcd:z \
+         -v #{ORIGIN_DIR}/openshift.local.volumes:#{ORIGIN_DIR}/openshift.local.volumes:z \
+         -v #{ORIGIN_DIR}/openshift.local.config:#{ORIGIN_DIR}/openshift.local.config:z \
+         -v #{ORIGIN_DIR}/openshift.local.etcd:#{ORIGIN_DIR}/openshift.local.etcd:z \
          openshift3/ose start \
           --master="https://#{PUBLIC_ADDRESS}:8443" \
-          --etcd-dir="/var/lib/origin/openshift.local.etcd"
+          --etcd-dir="#{ORIGIN_DIR}/openshift.local.etcd"
 
     sleep 15 # Give OpenShift 15 seconds to start
 
@@ -151,21 +155,21 @@ EOF
 
   config.vm.provision "shell", inline: <<-SHELL
     echo "[INFO] Configure Docker Registry and router ..."
-    master_config_dir=/var/lib/origin/openshift.local.config/master
+    master_config_dir=#{ORIGIN_DIR}/openshift.local.config/master
 
     export KUBECONFIG=${master_config_dir}/admin.kubeconfig
     chmod go+rw ${KUBECONFIG}
     echo "export KUBECONFIG=${KUBECONFIG}" > /etc/profile.d/openshift.sh
 
     # Create Docker Registry
-    if [ ! -f /var/lib/origin/configured.registry ]; then
+    if [ ! -f #{ORIGIN_DIR}/configured.registry ]; then
       oadm registry --create --credentials=${master_config_dir}/openshift-registry.kubeconfig
-      touch /var/lib/origin/configured.registry
+      touch #{ORIGIN_DIR}/configured.registry
     fi
 
     # For router, we have to create service account first and then use it for
     # router creation.
-    if [ ! -f /var/lib/origin/configured.router ]; then
+    if [ ! -f #{ORIGIN_DIR}/configured.router ]; then
       echo '{"kind":"ServiceAccount","apiVersion":"v1","metadata":{"name":"router"}}' \
         | oc create -f -
       oc get scc privileged -o json \
@@ -173,7 +177,7 @@ EOF
         | oc replace scc privileged -f -
       oadm router --create --credentials=${master_config_dir}/openshift-router.kubeconfig \
         --service-account=router
-      touch /var/lib/origin/configured.router
+      touch #{ORIGIN_DIR}/configured.router
     fi
   SHELL
 
@@ -204,23 +208,23 @@ EOF
 
   config.vm.provision "shell", inline: <<-SHELL
     echo "[INFO] Install OpenShift templates ..."
-    if [ ! -f /var/lib/origin/configured.templates ]; then
+    if [ ! -f #{ORIGIN_DIR}/configured.templates ]; then
       for name in $(find /opt/openshift/templates -name '*.json'); do
         oc create -f $name -n openshift >/dev/null
       done
-      touch /var/lib/origin/configured.templates
+      touch #{ORIGIN_DIR}/configured.templates
     fi
   SHELL
 
   config.vm.provision "shell", inline: <<-SHELL
     echo "[INFO] Create 'test-admin' user and 'test' project ..."
-    if [ ! -f /var/lib/origin/configured.user ]; then
+    if [ ! -f #{ORIGIN_DIR}/configured.user ]; then
       oadm policy add-role-to-user view test-admin
       oc login -u test-admin -p test
       oc new-project test --display-name="OpenShift 3 Sample" \
         --description="This is an example project to demonstrate OpenShift v3" &>/dev/null
       oc logout
-      touch /var/lib/origin/configured.user
+      touch #{ORIGIN_DIR}/configured.user
     fi
     echo
     echo
