@@ -187,16 +187,16 @@ EOF
     mkdir -p ${EXAMPLES_BASE}/{db-templates,image-streams,quickstart-templates,xpaas-streams,xpaas-templates}
     curl -sL https://github.com/openshift/origin/archive/master.zip -o origin-master.zip
     curl -sL https://github.com/openshift/nodejs-ex/archive/master.zip -o nodejs-ex-master.zip
-    curl -sL https://github.com/jboss-openshift/application-templates/archive/master.zip -o application-templates-master.zip
+    curl -sL https://github.com/jboss-openshift/application-templates/archive/ose-v1.0.2.zip -o application-templates-ose-v1.0.2.zip
     unzip -q nodejs-ex-master.zip
     unzip -q origin-master.zip
-    unzip -q application-templates-master.zip
+    unzip -q application-templates-ose-v1.0.2.zip
     cp origin-master/examples/db-templates/* ${EXAMPLES_BASE}/db-templates/
     cp origin-master/examples/jenkins/jenkins-*template.json ${EXAMPLES_BASE}/quickstart-templates/
     cp origin-master/examples/image-streams/* ${EXAMPLES_BASE}/image-streams/
     cp nodejs-ex-master/openshift/templates/* ${EXAMPLES_BASE}/quickstart-templates/
-    cp -R application-templates-master/* ${EXAMPLES_BASE}/xpaas-templates/
-    mv application-templates-master/jboss-image-streams.json ${EXAMPLES_BASE}/xpaas-streams/
+    cp -R application-templates-ose-v1.0.2/* ${EXAMPLES_BASE}/xpaas-templates/
+    mv application-templates-ose-v1.0.2/jboss-image-streams.json ${EXAMPLES_BASE}/xpaas-streams/
     rm -f /opt/openshift/templates/image-streams/image-streams-centos7.json
     popd >/dev/null
     rm -rf ${temp_dir}
