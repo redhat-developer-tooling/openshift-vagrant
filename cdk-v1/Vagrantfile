@@ -31,6 +31,17 @@ PUBLIC_ADDRESS="10.1.2.2"
 # This should be "/var/lib/openshift" in case you're not using the :latest tag.
 ORIGIN_DIR="/var/lib/origin"
 
+  SUBSCRIPTION_ERROR = "
+    You have to supply your Red Hat subscription credentials to run this Vagrant box.
+
+    Please run:
+    $ vagrant plugin install vagrant-registration
+
+    Then set these environment variable to your subscription username/password:
+    $ export SUB_USERNAME=rhn-username
+    $ export SUB_PASSWORD=password
+  "
+
 Vagrant.configure(2) do |config|
 
   config.vm.provider "virtualbox" do |v, override|
@@ -52,16 +63,6 @@ Vagrant.configure(2) do |config|
 
   config.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
 
-  SUBSCRIPTION_ERROR = "
-    You have to supply your Red Hat subscription credentials to run this Vagrant box.
-
-    Please run:
-    $ vagrant plugin install vagrant-registration
-
-    Then set these environment variable to your subscription username/password:
-    $ export SUB_USERNAME=rhn-username
-    $ export SUB_PASSWORD=password
-  "
   unless Vagrant.has_plugin?('vagrant-registration')
     raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
   end
@@ -144,38 +145,37 @@ EOF
   SHELL
 
   config.vm.provision "shell", inline: <<-SHELL
-    echo "[INFO] Copy the OpenShift client binaries to host ..."
     binaries=(oc oadm)
     for n in ${binaries[@]}; do
       [ -f /usr/bin/${n} ] && continue
+      echo "[INFO] Copy the OpenShift '${n}' binary to host /usr/bin/${n}..."
       docker run --rm --entrypoint=/bin/cat openshift3/ose /usr/bin/${n} > /usr/bin/${n}
       chmod +x /usr/bin/${n}
     done
+    echo "export OPENSHIFT_DIR=#{ORIGIN_DIR}/openshift.local.config/master" > /etc/profile.d/openshift.sh
   SHELL
 
   config.vm.provision "shell", inline: <<-SHELL
-    echo "[INFO] Configure Docker Registry and router ..."
-    master_config_dir=#{ORIGIN_DIR}/openshift.local.config/master
-
-    export KUBECONFIG=${master_config_dir}/admin.kubeconfig
-    chmod go+rw ${KUBECONFIG}
-    echo "export KUBECONFIG=${KUBECONFIG}" > /etc/profile.d/openshift.sh
+    export KUBECONFIG=${OPENSHIFT_DIR}/admin.kubeconfig
+    chmod go+r ${KUBECONFIG}
 
     # Create Docker Registry
     if [ ! -f #{ORIGIN_DIR}/configured.registry ]; then
-      oadm registry --create --credentials=${master_config_dir}/openshift-registry.kubeconfig
+      echo "[INFO] Configure Docker Registry ..."
+      oadm registry --create --credentials=${OPENSHIFT_DIR}/openshift-registry.kubeconfig
       touch #{ORIGIN_DIR}/configured.registry
     fi
 
     # For router, we have to create service account first and then use it for
     # router creation.
     if [ ! -f #{ORIGIN_DIR}/configured.router ]; then
+      echo "[INFO] Configure HAProxy router ..."
       echo '{"kind":"ServiceAccount","apiVersion":"v1","metadata":{"name":"router"}}' \
         | oc create -f -
       oc get scc privileged -o json \
         | sed '/\"users\"/a \"system:serviceaccount:default:router\",'  \
         | oc replace scc privileged -f -
-      oadm router --create --credentials=${master_config_dir}/openshift-router.kubeconfig \
+      oadm router --create --credentials=${OPENSHIFT_DIR}/openshift-router.kubeconfig \
         --service-account=router
       touch #{ORIGIN_DIR}/configured.router
     fi
@@ -183,9 +183,9 @@ EOF
 
   # FIXME: This is pretty ugly, should be refactored to something more smart ;-)
   config.vm.provision "shell", inline: <<-SHELL
-    echo "[INFO] Download OpenShift and xPaaS templates ..."
     EXAMPLES_BASE=/opt/openshift/templates
     [ -d "${EXAMPLES_BASE}" ] && exit 0
+    echo "[INFO] Download OpenShift and xPaaS templates ..."
     temp_dir=$(mktemp -d)
     pushd ${temp_dir} >/dev/null
     mkdir -p ${EXAMPLES_BASE}/{db-templates,image-streams,quickstart-templates,xpaas-streams,xpaas-templates}
@@ -202,13 +202,18 @@ EOF
     cp -R application-templates-ose-v1.0.2/* ${EXAMPLES_BASE}/xpaas-templates/
     mv application-templates-ose-v1.0.2/jboss-image-streams.json ${EXAMPLES_BASE}/xpaas-streams/
     rm -f /opt/openshift/templates/image-streams/image-streams-centos7.json
+    rm -f /opt/openshift/templates/xpaas-templates/eap/eap6-https-sti.json
+    rm -f /opt/openshift/templates/xpaas-templates/webserver/jws-tomcat8-basic-sti.json
+    rm -f /opt/openshift/templates/xpaas-templates/webserver/jws-tomcat7-https-sti.json
     popd >/dev/null
     rm -rf ${temp_dir}
   SHELL
 
   config.vm.provision "shell", inline: <<-SHELL
-    echo "[INFO] Install OpenShift templates ..."
+    export KUBECONFIG=${OPENSHIFT_DIR}/admin.kubeconfig
+
     if [ ! -f #{ORIGIN_DIR}/configured.templates ]; then
+      echo "[INFO] Install OpenShift templates ..."
       for name in $(find /opt/openshift/templates -name '*.json'); do
         oc create -f $name -n openshift >/dev/null
       done
@@ -216,15 +221,15 @@ EOF
     fi
   SHELL
 
-  config.vm.provision "shell", inline: <<-SHELL
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
     echo "[INFO] Create 'test-admin' user and 'test' project ..."
     if [ ! -f #{ORIGIN_DIR}/configured.user ]; then
-      oadm policy add-role-to-user view test-admin
-      oc login -u test-admin -p test
+      oadm policy add-role-to-user view test-admin --config=${OPENSHIFT_DIR}/admin.kubeconfig
+      oc login https://#{PUBLIC_ADDRESS}:8443 -u test-admin -p test \
+        --certificate-authority=${OPENSHIFT_DIR}/ca.crt &>/dev/null
       oc new-project test --display-name="OpenShift 3 Sample" \
         --description="This is an example project to demonstrate OpenShift v3" &>/dev/null
-      oc logout
-      touch #{ORIGIN_DIR}/configured.user
+      sudo touch #{ORIGIN_DIR}/configured.user
     fi
     echo
     echo
@@ -232,8 +237,13 @@ EOF
     echo
     echo "To use OpenShift CLI, run:"
     echo "$ vagrant ssh"
-    echo "$ oc login -u test-admin -p test"
+    echo "$ oc status"
     echo
+    echo "To become a cluster-admin, add '--config' to oc commands:"
+    echo "$ vagrant ssh"
+    echo "$ oc status --config=${OPENSHIFT_DIR}/admin.kubeconfig"
+    echo
+    echo "."
   SHELL
 
 end
