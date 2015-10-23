@@ -67,8 +67,8 @@ Vagrant.configure(2) do |config|
     raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
   end
 
-  config.registration.username    = ENV['SUB_USERNAME'] || 'UNSET'
-  config.registration.password    = ENV['SUB_PASSWORD'] || 'UNSET'
+  config.registration.username    = "#{ENV['SUB_USERNAME']}"
+  config.registration.password    = "#{ENV['SUB_PASSWORD']}"
   config.registration.auto_attach = true
 
   if config.registration.username.strip.empty? ||
