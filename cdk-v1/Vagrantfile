@@ -113,6 +113,7 @@ EOF
   config.vm.provision "shell", inline: <<-SHELL
     state=$(docker inspect -f "{{.State.Running}}" ose 2>/dev/null)
     [[ "${state}" == "true" ]] && exit 0
+    docker rm ose &>/dev/null || true
 
     echo "[INFO] Start the OpenShift server ..."
 
