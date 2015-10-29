@@ -85,7 +85,11 @@ will attempt to overwrite _admin.kubeconfig_. Probably better to just define an 
 
 ## Tips and Tricks
 
-Work in progress ...
+### Ever wanted to explore the OpenShift REST API
+
+Try this:
+* Open [this](http://openshift3swagger-claytondev.rhcloud.com) link in a browser
+* Paste the URL of the OpenShift instance (https://10.1.2.2:8443/swaggerapi/oapi/v1) into the input field
 
 
 
