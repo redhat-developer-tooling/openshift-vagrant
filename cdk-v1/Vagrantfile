@@ -115,6 +115,11 @@ EOF
     state=$(docker inspect -f "{{.State.Running}}" ose 2>/dev/null)
     [[ "${state}" == "true" ]] && exit 0
 
+    if docker inspect ose &>/dev/null; then
+      echo "[INFO] Removing previously started OpenShift server container ..."
+      docker rm -f -v ose 2>/dev/null
+    fi
+
     echo "[INFO] Start the OpenShift server ..."
 
     # Prepare directories for bind-mounting
@@ -133,7 +138,8 @@ EOF
          -v #{ORIGIN_DIR}/openshift.local.etcd:#{ORIGIN_DIR}/openshift.local.etcd:z \
          openshift3/ose start \
           --master="https://#{PUBLIC_ADDRESS}:8443" \
-          --etcd-dir="#{ORIGIN_DIR}/openshift.local.etcd"
+          --etcd-dir="#{ORIGIN_DIR}/openshift.local.etcd" \
+          --cors-allowed-origins=.*
 
     sleep 15 # Give OpenShift 15 seconds to start
 
@@ -233,7 +239,6 @@ EOF
       sudo touch #{ORIGIN_DIR}/configured.user
     fi
     echo
-    echo
     echo "You can now access OpenShift console on: https://#{PUBLIC_ADDRESS}:8443/console"
     echo
     echo "To use OpenShift CLI, run:"
@@ -244,6 +249,11 @@ EOF
     echo "$ vagrant ssh"
     echo "$ oc status --config=${OPENSHIFT_DIR}/admin.kubeconfig"
     echo
+    echo "To browse the OpenShift API documentation, follow this link:"
+    echo "http://openshift3swagger-claytondev.rhcloud.com"
+    echo
+    echo "Then enter this URL:"
+    echo https://#{PUBLIC_ADDRESS}:8443/swaggerapi/oapi/v1
     echo "."
   SHELL
 
