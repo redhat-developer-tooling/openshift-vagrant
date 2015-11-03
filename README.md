@@ -85,6 +85,57 @@ will attempt to overwrite _admin.kubeconfig_. Probably better to just define an 
 
 ## Tips and Tricks
 
+### How to debug an EAP container
+
+This is based using the _jboss-eap-6/eap-openshift:6.4_ image from
+_registry.access.redhat.com_. This image is for example used by the _eap6-basic-sti_
+template.
+
+The startup script _standalone.sh_ for the EAP instance within this image checks the
+variable _DEBUG_ to check whether to enable remote debugging on port 8787.
+
+```
+# Get the name of the deployment config.
+$ oc get dc
+NAME      TRIGGERS      LATEST VERSION
+eap-app   ImageChange   1
+
+# Check the current environment variables (optional)
+$ oc env dc/eap-app --list
+OPENSHIFT_DNS_PING_SERVICE_NAME=eap-app-ping
+OPENSHIFT_DNS_PING_SERVICE_PORT=8888
+HORNETQ_CLUSTER_PASSWORD=mVxpNmqt
+HORNETQ_QUEUES=
+HORNETQ_TOPICS=
+
+# Set the DEBUG variable
+$ oc env dc/eap-app DEBUG=true
+
+# Double check the variable is set
+$oc env dc/eap-app --list
+OPENSHIFT_DNS_PING_SERVICE_NAME=eap-app-ping
+OPENSHIFT_DNS_PING_SERVICE_PORT=8888
+HORNETQ_CLUSTER_PASSWORD=mVxpNmqt
+HORNETQ_QUEUES=
+HORNETQ_TOPICS=
+DEBUG=true
+
+# Redeploy the latest image
+$ oc deploy eap-app --latest -n eap
+
+# Get the name of the running pod
+$ oc get pods
+NAME              READY     STATUS      RESTARTS   AGE
+eap-app-1-build   0/1       Completed   0          2h
+eap-app-3-rw4ko   1/1       Running     0          1h
+
+# Port forward the debug port
+$ oc port-forward eap-app-3-rw4ko 8787:8787
+```
+
+Once the `oc port-forward` command is executed, you can attach a remote
+debugger to port 8787 on localhost.
+
 ### Ever wanted to explore the OpenShift REST API
 
 Try this:
