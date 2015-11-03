@@ -123,10 +123,9 @@ DEBUG=true
 # Redeploy the latest image
 $ oc deploy eap-app --latest -n eap
 
-# Get the name of the running pod
-$ oc get pods
+# Get the name of the running pod using the deployment config name as selector
+$ oc get pods -l deploymentConfig=eap-app
 NAME              READY     STATUS      RESTARTS   AGE
-eap-app-1-build   0/1       Completed   0          2h
 eap-app-3-rw4ko   1/1       Running     0          1h
 
 # Port forward the debug port
