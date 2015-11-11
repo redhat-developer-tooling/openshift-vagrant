@@ -5,16 +5,17 @@
 - [What is it?](#what-is-it)
 - [Prerequisites](#prerequisites)
 - [How do I run it?](#how-do-i-run-it)
-	- [Known issues](#known-issues)
+  - [Known issues](#known-issues)
 - [Logins](#logins)
-	- [Regular users](#regular-users)
-	- [_test-admin_](#_test-admin_)
-	- [Cluster admin](#cluster-admin)
+  - [Regular users](#regular-users)
+  - [_test-admin_](#_test-admin_)
+  - [Cluster admin](#cluster-admin)
 - [Misc](#misc)
-	- [How to debug EAP image](#how-to-debug-eap-image)
-	- [Run images which use USER directive in Dockerfile](#run-images-which-use-user-directive-in-dockerfile)
-	- [Find cause of container startup failure](#find-cause-of-container-startup-failure)
-	- [Explore the OpenShift REST API](#explore-the-openshift-rest-api)
+  - [Exposing OpenShift routes to the host](#exposing-openshift-routes-to-the-host)
+  - [How to debug EAP image](#how-to-debug-eap-image)
+  - [Run images which use USER directive in Dockerfile](#run-images-which-use-user-directive-in-dockerfile)
+  - [Find cause of container startup failure](#find-cause-of-container-startup-failure)
+  - [Explore the OpenShift REST API](#explore-the-openshift-rest-api)
 
 <!-- /MarkdownTOC -->
 
@@ -108,6 +109,30 @@ will attempt to overwrite _admin.kubeconfig_. Probably better to just define an 
 
 <a name="misc"></a>
 ## Misc
+
+<a name="exposing-openshift-routes-to-the-host"></a>
+### Exposing OpenShift routes to the host
+
+Currently there is no solution for this on Windows (work on a automatic soltution
+is in progress), except manually editing the hosts file and adding entries of the
+form:
+
+```
+10.1.2.2 <routename>-<project>.router.default.svc.cluster.local
+```
+
+This will also work for OS X and Linux, however, in these cases you can also
+use the [Landrush](https://github.com/phinze/landrush) Vagrant plugin. Adding
+the following to your _Vagrantfile_ should get you sorted:
+
+```
+config.landrush.enabled = true
+config.landrush.host 'router.default.svc.cluster.local', "#{PUBLIC_ADDRESS}"
+config.landrush.guest_redirect_dns = false
+```
+
+This will work out of the boc on OS X. On Linux you alo need _dnsmasq_. Check
+the Landrush documentation.
 
 <a name="how-to-debug-eap-image"></a>
 ### How to debug EAP image
