@@ -12,7 +12,8 @@
   - [Cluster admin](#cluster-admin)
 - [Misc](#misc)
   - [Exposing OpenShift routes to the host](#exposing-openshift-routes-to-the-host)
-  - [How to test the webhooks](#how-to-test-the-webhooks)
+  - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
+  - [How to test webhooks locally](#how-to-test-webhooks-locally)
   - [How to debug EAP image](#how-to-debug-eap-image)
   - [Run images which use USER directive in Dockerfile](#run-images-which-use-user-directive-in-dockerfile)
   - [Find cause of container startup failure](#find-cause-of-container-startup-failure)
@@ -135,31 +136,69 @@ config.landrush.guest_redirect_dns = false
 This will work out of the boc on OS X. On Linux you alo need _dnsmasq_. Check
 the Landrush documentation.
 
-<a name="how-to-test-the-webhooks"></a>
-### How to test the webhooks
+Another nice trick is to use [xip.io](http://xip.io/). This works on all OSes.
+You can either create your route already with a xip hostname:
+
+```
+oc expose service <service-name> --hostname=foo.10.1.2.2.xip.io
+```
+
+or you edit an existing route:
+
+```
+oc edit route/<route-name>
+```
+
+and change the hostname to an xip one. In both cases the app will then
+be accessible via the xip route.
+
+
+<a name="how-to-sync-an-existing-openshift-project"></a>
+### How to sync an existing OpenShift project
+
+First step is to export the configuration from the existing project:
+
+```
+$ oc export is,bc,dc,svc,route -o json > project-config.json
+```
+
+At this stage you probably want to edit the json and change the route.
+You can do this also after the import by `oc edit route`.
+
+Then on the second instance, create a new project, import the resources
+and trigger a new build:
+
+```
+$ oc new-project foo
+$ oc create -f project-config.json
+$ oc new-build <build-config-name>
+```
+
+<a name="how-to-test-webhooks-locally"></a>
+### How to test webhooks locally
 
 Since the created VM is only visible on the host, GitHub webhooks won't work, since
 GitHub cannot reach the VM. Obviously you can just trigger the build via _oc_:
 
 ```
-oc start-build <build-config-name>
+$ oc start-build <build-config-name>
 ```
 
 If you want to ensure that the actual webhooks work though, you can trigger them
 via curl as well. First determine the URLs of the GitHub and generic URL:
 
 ```
-oc describe <build-config-name>
+$ oc describe <build-config-name>
 ```
 
 To trigger the generic hook run:
 ```
-curl -k -X POST <generic-hook-url>
+$ curl -k -X POST <generic-hook-url>
 ```
 
 To trigger the GitHub hook run:
 ```
-curl -k \
+$ curl -k \
 -H "Content-Type: application/json" \
 -H "X-Github-Event: push" \
 -X POST -d '{"ref":"refs/heads/master"}' \
