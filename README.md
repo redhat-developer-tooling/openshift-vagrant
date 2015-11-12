@@ -12,6 +12,7 @@
   - [Cluster admin](#cluster-admin)
 - [Misc](#misc)
   - [Exposing OpenShift routes to the host](#exposing-openshift-routes-to-the-host)
+  - [How to test the webhooks](#how-to-test-the-webhooks)
   - [How to debug EAP image](#how-to-debug-eap-image)
   - [Run images which use USER directive in Dockerfile](#run-images-which-use-user-directive-in-dockerfile)
   - [Find cause of container startup failure](#find-cause-of-container-startup-failure)
@@ -133,6 +134,40 @@ config.landrush.guest_redirect_dns = false
 
 This will work out of the boc on OS X. On Linux you alo need _dnsmasq_. Check
 the Landrush documentation.
+
+<a name="how-to-test-the-webhooks"></a>
+### How to test the webhooks
+
+Since the created VM is only visible on the host, GitHub webhooks won't work, since
+GitHub cannot reach the VM. Obviously you can just trigger the build via _oc_:
+
+```
+oc start-build <build-config-name>
+```
+
+If you want to ensure that the actual webhooks work though, you can trigger them
+via curl as well. First determine the URLs of the GitHub and generic URL:
+
+```
+oc describe <build-config-name>
+```
+
+To trigger the generic hook run:
+```
+curl -k -X POST <generic-hook-url>
+```
+
+To trigger the GitHub hook run:
+```
+curl -k \
+-H "Content-Type: application/json" \
+-H "X-Github-Event: push" \
+-X POST -d '{"ref":"refs/heads/master"}' \
+<github-hook-url>
+```
+
+The GitHub payload is quite extensive, but the only thing which matters from
+an OpenShift perspective at the moment is that the _ref_ matches.
 
 <a name="how-to-debug-eap-image"></a>
 ### How to debug EAP image
