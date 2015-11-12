@@ -77,6 +77,15 @@ Vagrant.configure(2) do |config|
     raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
   end
 
+  # On OS X you can enable Landrush to expose OpenShift routes to the host
+  # Install the Landrush plugin 'vagrant plugin install landrush'
+  # and comment in the lines below
+  # This won't work on Windows and on Linux the TLD ending on .local might cause
+  # problems
+  #config.landrush.enabled = true
+  #config.landrush.tld = 'router.default.svc.cluster.local'
+  #config.landrush.guest_redirect_dns = false
+
   # Update Docker in the CDK image to latest version
   config.vm.provision "shell", inline: <<-SHELL
     ( yum repolist | grep -q rhel-7-server-extras-rpms ) && exit 0

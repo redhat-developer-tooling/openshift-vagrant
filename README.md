@@ -127,7 +127,7 @@ the following to your _Vagrantfile_ should get you sorted:
 
 ```
 config.landrush.enabled = true
-config.landrush.host 'router.default.svc.cluster.local', "#{PUBLIC_ADDRESS}"
+config.landrush.tld = 'router.default.svc.cluster.local'
 config.landrush.guest_redirect_dns = false
 ```
 
