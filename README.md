@@ -11,6 +11,7 @@
   - [_test-admin_](#_test-admin_)
   - [Cluster admin](#cluster-admin)
 - [Misc](#misc)
+  - [How to access the VM's Docker daemon on the host](#how-to-access-the-vms-docker-daemon-on-the-host)
   - [Exposing OpenShift routes to the host](#exposing-openshift-routes-to-the-host)
   - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
   - [How to test webhooks locally](#how-to-test-webhooks-locally)
@@ -24,8 +25,8 @@
 <a name="what-is-it"></a>
 ## What is it?
 
-This repository contains a _Vagrantfile_ to start a Vagrant virtual machine
-based on CDK 1.0.1, running a containerized version of OpenShift Enterprise.
+This repository contains Vagrant setups to start a Vagrant virtual machine
+running a containerized version of OpenShift Enterprise using CDK 1.0.1 respectively 2.0 Beta3
 
 <a name="prerequisites"></a>
 ## Prerequisites
@@ -37,37 +38,34 @@ virtual machine:
 * [Vagrant](https://www.vagrantup.com/) installed
 * [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) installed
  * Run `vagrant plugin install vagrant-registration` to install plugin
- * You can run `vagrant plugin list` after installation to verify the installation.
-   Current version is 0.0.19
+* [vagrant-adbinfo plugin](https://github.com/bexelbie/vagrant-adbinfo) installed
+ * Run `vagrant plugin install vagrant-adbinfo` to install plugin
+* [landrush plugin](https://github.com/phinze/landrush) installed (__OSX and Linux only!__)
+ * Run `vagrant plugin install landrush` to install plugin
 * RHEL employee subscription credentials available
 * Active VPN connection during the creation and provisioning of the vm
 
 <a name="how-do-i-run-it"></a>
 ## How do I run it?
 
-    $ cd cdk-v1
+    $ cd cdk-v2
     $ export SUB_USERNAME=<your-subscription-username>
     $ export SUB_PASSWORD=<your-subscription-password>
     $ vagrant up
 
-This will start and provision the vm as well as start an all-in-One OpenShift
+This will start and provision the VM, as well as start an all-in-One OpenShift
 Enterprise instance. There are currently no scripts to start/stop OpenShift.
 To restart OpenShift after an `vagrant halt`, run `vagrant up && vagrant provision`.
-Provisioning steps which have already occurred will be skipped and in the end a new
-OpenShift instance is created. All state is lost in this case. To keep the state of
-the running vm use `vagrant suspend` and `vagrant resume`.
+Provisioning steps which have already occurred will be skipped and OpenShift is restarted.
 
 <a name="known-issues"></a>
 ### Known issues
 
-* ~~There is a known [issue](https://github.com/openshift/origin/issues/5355) which
-  will send the OpenShift instance into overdrive, consuming pretty much all available
-  CPU cycles. When it happens, all you can do for now is `vagrant destroy` followed by
-  `vagrant up`.~~
 * There are problems when using the Vagrant vbguest plugin in conjunction with the
   vagrant-registration plugin. The vbguest plugin will try running a yum update
   command prior the registration has taken place. To avoid this, uninstall the
-  vbguest plugin or add the following to the _Vagrantfile_: `config.vbguest.auto_update = false`.
+  vbguest plugin or add the following to the _Vagrantfile_: `config.vbguest.
+  auto_update = false`.
 
 <a name="logins"></a>
 ## Logins
@@ -111,6 +109,19 @@ will attempt to overwrite _admin.kubeconfig_. Probably better to just define an 
 
 <a name="misc"></a>
 ## Misc
+
+<a name="how-to-access-the-vms-docker-daemon-on-the-host"></a>
+### How to access the VM's Docker daemon on the host
+
+Run `vagrant adbinfo`. Ignore all values except _DOCKER_MACHINE_NAME_ and
+set the following environment variables in your shell:
+
+```
+export DOCKER_HOST=tcp://10.1.2.2:2376
+export DOCKER_MACHINE_NAME=<machine-name>
+```
+
+__Note__, the last line is incorrect. There is no hyphen in 'adbinfo'.
 
 <a name="exposing-openshift-routes-to-the-host"></a>
 ### Exposing OpenShift routes to the host

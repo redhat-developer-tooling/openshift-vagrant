@@ -1,0 +1,132 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Usage:
+#
+# To use this Vagrantfile, you(optional):
+# * Connected to internal Red Hat network if you need to any package update
+# * Have 'vagrant-registration' plugin installed
+# * Have valid RH employee subscription account
+# * Have 'vagrant-adbinfo' plugin installed
+
+# General configuration:
+
+# URLs from where to fetch the Vagrant Virtualbox images
+# FIXME: How to point to the official box image?
+VAGRANT_VIRTUALBOX_URL="http://download.devel.redhat.com/brewroot/work/tasks/2357/10112357/rhel-cdk-kubernetes-7.2-3.x86_64.vagrant-virtualbox.box"
+VAGRANT_LIBVIRT_URL="http://download.devel.redhat.com/brewroot/work/tasks/2357/10112357/rhel-cdk-kubernetes-7.2-3.x86_64.vagrant-libvirt.box"
+
+# The public IP address of the VM
+PUBLIC_ADDRESS="10.1.2.2"
+
+SUBSCRIPTION_ERROR = "
+    You have to supply your Red Hat subscription credentials to run this Vagrant box.
+
+    Please run:
+    $ vagrant plugin install vagrant-registration
+
+    Then set these environment variable to your subscription username/password:
+    $ export SUB_USERNAME=rhn-username
+    $ export SUB_PASSWORD=password
+  "
+
+NO_ADBINFO_ERROR = "vagrant-adbinfo plugin is not installed, run `vagrant plugin install vagrant-adbinfo` to install the plugin."
+
+# The Docker registry from where we pull the OpenShift Enterprise Docker image
+REDHAT_DOCKER_REGISTRY="registry.access.redhat.com"
+REDHAT_INTERNAL_DOCKER_REGISTRY="rcm-img-docker01.build.eng.bos.redhat.com:5001"
+
+Vagrant.configure(2) do |config|
+
+  config.vm.provider "virtualbox" do |v, override|
+  	override.vm.box = "cdk_v2"
+    override.vm.box_url = "#{VAGRANT_VIRTUALBOX_URL}"
+    v.name = "openshift.cdk-2"
+    v.memory = 1024
+    v.cpus   = 2
+    v.customize ["modifyvm", :id, "--ioapic", "on"]
+    v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+  end
+
+  config.vm.provider "libvirt" do |v, override|
+  	override.vm.box = "cdk_v2"
+    override.vm.box_url = "#{VAGRANT_LIBVIRT_URL}"
+    v.driver = "kvm"
+    v.memory = 1024
+    v.cpus   = 2
+  end
+
+  config.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
+
+  unless Vagrant.has_plugin?('vagrant-registration')
+    raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
+  end
+
+  config.registration.username    = "#{ENV['SUB_USERNAME']}"
+  config.registration.password    = "#{ENV['SUB_PASSWORD']}"
+  config.registration.auto_attach = true
+
+  if config.registration.username.strip.empty? ||
+     config.registration.password.strip.empty?
+    raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
+  end
+
+  # check if plugin is installed on system
+  unless Vagrant.has_plugin?("vagrant-adbinfo")
+    raise Vagrant::Errors::VagrantError.new, NO_ADBINFO_ERROR
+  end
+
+  # We need a way to expose the created OpenShift routes to the host
+  # For now there is no Windows solution. For OS X and Linux enable Landrush
+  if ! OS.windows? then
+  	if Vagrant.has_plugin?("vagrant-adbinfo") then
+      config.landrush.enabled = true
+      config.landrush.tld = 'router.default.svc.cluster.local'
+      config.landrush.guest_redirect_dns = false
+    else
+      puts "To expose routes to host install Landrush plugin - 'vagrant install landrush'"
+    end
+  end
+
+  config.vm.provision :shell, :path => "./scripts/configure_docker.sh", :args => "#{REDHAT_DOCKER_REGISTRY} #{REDHAT_INTERNAL_DOCKER_REGISTRY} #{PUBLIC_ADDRESS}"
+  config.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{REDHAT_DOCKER_REGISTRY} #{PUBLIC_ADDRESS}"
+
+  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+    echo
+    echo "You can now access OpenShift console on: https://#{PUBLIC_ADDRESS}:8443/console"
+    echo
+    echo "To use OpenShift CLI, run:"
+    echo "$ vagrant ssh"
+    echo "$ oc status"
+    echo
+    echo "To become a cluster-admin, add '--config' to oc commands:"
+    echo "$ vagrant ssh"
+    echo "$ oc status --config=${OPENSHIFT_DIR}/admin.kubeconfig"
+    echo
+    echo "To browse the OpenShift API documentation, follow this link:"
+    echo "http://openshift3swagger-claytondev.rhcloud.com"
+    echo
+    echo "Then enter this URL:"
+    echo https://#{PUBLIC_ADDRESS}:8443/swaggerapi/oapi/v1
+    echo "."
+  SHELL
+
+end
+
+module OS
+    def OS.windows?
+        (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
+    end
+
+    def OS.mac?
+        (/darwin/ =~ RUBY_PLATFORM) != nil
+    end
+
+    def OS.unix?
+        !OS.windows?
+    end
+
+    def OS.linux?
+        OS.unix? and not OS.mac?
+    end
+end
