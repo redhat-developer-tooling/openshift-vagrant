@@ -30,8 +30,7 @@ cat << EOF > /etc/sysconfig/docker
 # Configured by Vagrant
 DOCKER_CERT_PATH=/etc/docker
 INSECURE_REGISTRY='--insecure-registry ${2} --insecure-registry 172.30.0.0/16'
-#OPTIONS="--selinux-enabled -H tcp://${3}:2376 -H unix:///var/run/docker.sock --tlscacert=/etc/docker/ca.pem --tlscert=/etc/docker/server-cert.pem --tlskey=/etc/docker/server-key.pem"
-OPTIONS="--selinux-enabled -H tcp://10.1.2.2:2376 -H unix:///var/run/docker.sock"
+OPTIONS="--selinux-enabled -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --tlscacert=/etc/docker/ca.pem --tlscert=/etc/docker/server-cert.pem --tlskey=/etc/docker/server-key.pem"
 ADD_REGISTRY='--add-registry ${2} --add-registry ${1}'
 EOF
 

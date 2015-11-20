@@ -88,7 +88,7 @@ Vagrant.configure(2) do |config|
     end
   end
 
-  config.vm.provision :shell, :path => "./scripts/configure_docker.sh", :args => "#{REDHAT_DOCKER_REGISTRY} #{REDHAT_INTERNAL_DOCKER_REGISTRY} #{PUBLIC_ADDRESS}"
+  config.vm.provision :shell, :path => "./scripts/configure_docker.sh", :args => "#{REDHAT_DOCKER_REGISTRY} #{REDHAT_INTERNAL_DOCKER_REGISTRY}"
   config.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{REDHAT_DOCKER_REGISTRY} #{PUBLIC_ADDRESS}"
 
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
