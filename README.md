@@ -12,7 +12,6 @@
   - [_test-admin_](#_test-admin_)
   - [Cluster admin](#cluster-admin)
 - [Misc](#misc)
-  - [How to expose OpenShift routes to the host](#how-to-expose-openshift-routes-to-the-host)
   - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
   - [How to test webhooks locally](#how-to-test-webhooks-locally)
   - [How to debug EAP image](#how-to-debug-eap-image)
@@ -122,46 +121,6 @@ will attempt to overwrite _admin.kubeconfig_. Probably better to just define an 
 
 <a name="misc"></a>
 ## Misc
-
-<a name="how-to-expose-openshift-routes-to-the-host"></a>
-### How to expose OpenShift routes to the host
-
-Currently there is no solution for this on Windows (work on a automatic soltution
-is in progress), except manually editing the hosts file and adding entries of the
-form:
-
-```
-10.1.2.2 <routename>-<project>.router.default.svc.cluster.local
-```
-
-This will also work for OS X and Linux, however, in these cases you can also
-use the [Landrush](https://github.com/phinze/landrush) Vagrant plugin. Adding
-the following to your _Vagrantfile_ should get you sorted:
-
-```
-config.landrush.enabled = true
-config.landrush.tld = 'router.default.svc.cluster.local'
-config.landrush.guest_redirect_dns = false
-```
-
-This will work out of the boc on OS X. On Linux you alo need _dnsmasq_. Check
-the Landrush documentation.
-
-Another nice trick is to use [xip.io](http://xip.io/). This works on all OSes.
-You can either create your route already with a xip hostname:
-
-```
-oc expose service <service-name> --hostname=foo.10.1.2.2.xip.io
-```
-
-or you edit an existing route:
-
-```
-oc edit route/<route-name>
-```
-
-and change the hostname to an xip one. In both cases the app will then
-be accessible via the xip route.
 
 <a name="how-to-sync-an-existing-openshift-project"></a>
 ### How to sync an existing OpenShift project

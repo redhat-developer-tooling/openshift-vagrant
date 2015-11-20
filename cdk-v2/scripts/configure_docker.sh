@@ -15,8 +15,8 @@ set -o nounset
 # set -o xtrace
 
 if [ -f /opt/docker_selinux ]; then
-  echo "[INFO] Skipping Docker configuration. Already done."
-  exit 0;
+	echo "[INFO] Skipping Docker configuration. Already done."
+	exit 0;
 fi
 
 # Do some SeLinux wodoo

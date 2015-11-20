@@ -76,18 +76,6 @@ Vagrant.configure(2) do |config|
     raise Vagrant::Errors::VagrantError.new, NO_ADBINFO_ERROR
   end
 
-  # We need a way to expose the created OpenShift routes to the host
-  # For now there is no Windows solution. For OS X and Linux enable Landrush
-  if ! OS.windows? then
-  	if Vagrant.has_plugin?("landrush") then
-      config.landrush.enabled = true
-      config.landrush.tld = 'router.default.svc.cluster.local'
-      config.landrush.guest_redirect_dns = false
-    else
-      puts "To expose routes to host install Landrush plugin - 'vagrant install landrush'"
-    end
-  end
-
   config.vm.provision :shell, :path => "./scripts/configure_docker.sh", :args => "#{REDHAT_DOCKER_REGISTRY} #{REDHAT_INTERNAL_DOCKER_REGISTRY}"
   config.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{REDHAT_DOCKER_REGISTRY} #{PUBLIC_ADDRESS}"
 
