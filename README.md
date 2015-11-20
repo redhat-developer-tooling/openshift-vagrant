@@ -5,28 +5,28 @@
 - [What is it?](#what-is-it)
 - [Prerequisites](#prerequisites)
 - [How do I run it?](#how-do-i-run-it)
+  - [How to access the VM's Docker daemon](#how-to-access-the-vms-docker-daemon)
   - [Known issues](#known-issues)
-- [Logins](#logins)
+- [OpenShift Logins](#openshift-logins)
   - [Regular users](#regular-users)
   - [_test-admin_](#_test-admin_)
   - [Cluster admin](#cluster-admin)
 - [Misc](#misc)
-  - [How to access the VM's Docker daemon on the host](#how-to-access-the-vms-docker-daemon-on-the-host)
-  - [Exposing OpenShift routes to the host](#exposing-openshift-routes-to-the-host)
+  - [How to expose OpenShift routes to the host](#how-to-expose-openshift-routes-to-the-host)
   - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
   - [How to test webhooks locally](#how-to-test-webhooks-locally)
   - [How to debug EAP image](#how-to-debug-eap-image)
-  - [Run images which use USER directive in Dockerfile](#run-images-which-use-user-directive-in-dockerfile)
-  - [Find cause of container startup failure](#find-cause-of-container-startup-failure)
-  - [Explore the OpenShift REST API](#explore-the-openshift-rest-api)
+  - [How to run images which use USER directive in Dockerfile](#how-to-run-images-which-use-user-directive-in-dockerfile)
+  - [How to find cause of container startup failure](#how-to-find-cause-of-container-startup-failure)
+  - [How to explore the OpenShift REST API](#how-to-explore-the-openshift-rest-api)
 
 <!-- /MarkdownTOC -->
 
 <a name="what-is-it"></a>
 ## What is it?
 
-This repository contains Vagrant setups to start a Vagrant virtual machine
-running a containerized version of OpenShift Enterprise using CDK 1.0.1 respectively 2.0 Beta3
+This repository contain a Vagrant setup to start a Vagrant virtual machine
+running a containerized version of OpenShift Enterprise using CDK 2 (Beta3).
 
 <a name="prerequisites"></a>
 ## Prerequisites
@@ -34,16 +34,14 @@ running a containerized version of OpenShift Enterprise using CDK 1.0.1 respecti
 The following prerequisites need to be met prior to creating and provisioning the
 virtual machine:
 
+* __RHEL employee subscription credentials available__
+* __Active VPN connection during the creation and provisioning of the VM__
 * [VirtualBox](https://www.virtualbox.org/) installed
 * [Vagrant](https://www.vagrantup.com/) installed
 * [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) installed
  * Run `vagrant plugin install vagrant-registration` to install plugin
 * [vagrant-adbinfo plugin](https://github.com/bexelbie/vagrant-adbinfo) installed
  * Run `vagrant plugin install vagrant-adbinfo` to install plugin
-* [landrush plugin](https://github.com/phinze/landrush) installed (__OSX and Linux only!__)
- * Run `vagrant plugin install landrush` to install plugin
-* RHEL employee subscription credentials available
-* Active VPN connection during the creation and provisioning of the vm
 
 <a name="how-do-i-run-it"></a>
 ## How do I run it?
@@ -56,7 +54,22 @@ virtual machine:
 This will start and provision the VM, as well as start an all-in-One OpenShift
 Enterprise instance. There are currently no scripts to start/stop OpenShift.
 To restart OpenShift after an `vagrant halt`, run `vagrant up && vagrant provision`.
-Provisioning steps which have already occurred will be skipped and OpenShift is restarted.
+Provisioning steps which have already occurred will be skipped.
+
+__Note, the used VM boxes are downloaded from brew. This links are temporary. If you
+are having problems downloading the vagrant boxes, let us know. We will make sure
+to update to the latest working URL.__
+
+<a name="how-to-access-the-vms-docker-daemon"></a>
+### How to access the VM's Docker daemon
+
+Run `vagrant adbinfo`. Ignore all values except _DOCKER_MACHINE_NAME_ and
+set the following environment variables in your shell:
+
+```
+export DOCKER_HOST=tcp://10.1.2.2:2376
+export DOCKER_MACHINE_NAME=<machine-name>
+```
 
 <a name="known-issues"></a>
 ### Known issues
@@ -67,8 +80,8 @@ Provisioning steps which have already occurred will be skipped and OpenShift is 
   vbguest plugin or add the following to the _Vagrantfile_: `config.vbguest.
   auto_update = false`.
 
-<a name="logins"></a>
-## Logins
+<a name="openshift-logins"></a>
+## OpenShift Logins
 
 Once up an running the OpenShift console is accessible under https://10.1.2.2:8443/console/.
 
@@ -110,21 +123,8 @@ will attempt to overwrite _admin.kubeconfig_. Probably better to just define an 
 <a name="misc"></a>
 ## Misc
 
-<a name="how-to-access-the-vms-docker-daemon-on-the-host"></a>
-### How to access the VM's Docker daemon on the host
-
-Run `vagrant adbinfo`. Ignore all values except _DOCKER_MACHINE_NAME_ and
-set the following environment variables in your shell:
-
-```
-export DOCKER_HOST=tcp://10.1.2.2:2376
-export DOCKER_MACHINE_NAME=<machine-name>
-```
-
-__Note__, the last line is incorrect. There is no hyphen in 'adbinfo'.
-
-<a name="exposing-openshift-routes-to-the-host"></a>
-### Exposing OpenShift routes to the host
+<a name="how-to-expose-openshift-routes-to-the-host"></a>
+### How to expose OpenShift routes to the host
 
 Currently there is no solution for this on Windows (work on a automatic soltution
 is in progress), except manually editing the hosts file and adding entries of the
@@ -162,7 +162,6 @@ oc edit route/<route-name>
 
 and change the hostname to an xip one. In both cases the app will then
 be accessible via the xip route.
-
 
 <a name="how-to-sync-an-existing-openshift-project"></a>
 ### How to sync an existing OpenShift project
@@ -270,8 +269,8 @@ $ oc port-forward eap-app-3-rw4ko 8787:8787
 Once the `oc port-forward` command is executed, you can attach a remote
 debugger to port 8787 on localhost.
 
-<a name="run-images-which-use-user-directive-in-dockerfile"></a>
-### Run images which use USER directive in Dockerfile
+<a name="how-to-run-images-which-use-user-directive-in-dockerfile"></a>
+### How to run images which use USER directive in Dockerfile
 
 Out of security reasons, images run on OpenShift are not honoring the _USER_
 directive. This can lead to very misleading errors. OpenShift "enabled" images
@@ -285,8 +284,8 @@ $ oc --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig edi
 ```
 Change the _runAsUser.Type_ strategy to _RunAsAny_. More info [here](https://docs.openshift.org/latest/admin_guide/manage_scc.html#enable-images-to-run-with-user-in-the-dockerfile).
 
-<a name="find-cause-of-container-startup-failure"></a>
-### Find cause of container startup failure
+<a name="how-to-find-cause-of-container-startup-failure"></a>
+### How to find cause of container startup failure
 
 In conjunction with trying to run arbitrary Docker images on OpenShift, it can be
 hard to track down deployment errors. If the deployment of a pot fails, OpenShift
@@ -294,7 +293,6 @@ will try to reschedule a deployment and the original pod won't be available anym
 In this case you can try accessing the logs of the failing container directly
 via Docker commands against the Docker daemon running within the VM (the Docker
 daemon of the VM is used by the OpenShift instance itself as well).
-
 
 View the docker logs
 
@@ -308,12 +306,12 @@ $ docker ps -l -q
 $ docker logs 5b37abf17fb6
 ```
 
-<a name="explore-the-openshift-rest-api"></a>
-### Explore the OpenShift REST API
+<a name="how-to-explore-the-openshift-rest-api"></a>
+### How to explore the OpenShift REST API
 
 Try this:
 * Open [this](http://openshift3swagger-claytondev.rhcloud.com) link in a browser
-* Paste the URL of the OpenShift instance (https://10.1.2.2:8443/swaggerapi/oapi/v1) into the input field
+* Paste the URL of the OpenShift instance "https://10.1.2.2:8443/swaggerapi/oapi/v1" into the input field
 
 
 

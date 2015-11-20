@@ -79,7 +79,7 @@ Vagrant.configure(2) do |config|
   # We need a way to expose the created OpenShift routes to the host
   # For now there is no Windows solution. For OS X and Linux enable Landrush
   if ! OS.windows? then
-  	if Vagrant.has_plugin?("vagrant-adbinfo") then
+  	if Vagrant.has_plugin?("landrush") then
       config.landrush.enabled = true
       config.landrush.tld = 'router.default.svc.cluster.local'
       config.landrush.guest_redirect_dns = false
