@@ -19,6 +19,9 @@ VAGRANT_LIBVIRT_URL="http://download.devel.redhat.com/brewroot/work/tasks/2357/1
 # The public IP address of the VM
 PUBLIC_ADDRESS="10.1.2.2"
 
+# The public hostname for the box. Uses xip.io to have zero configuration routes
+PUBLIC_HOST="cdk.#{PUBLIC_ADDRESS}.xip.io"
+
 SUBSCRIPTION_ERROR = "
     You have to supply your Red Hat subscription credentials to run this Vagrant box.
 
@@ -31,10 +34,6 @@ SUBSCRIPTION_ERROR = "
   "
 
 NO_ADBINFO_ERROR = "vagrant-adbinfo plugin is not installed, run `vagrant plugin install vagrant-adbinfo` to install the plugin."
-
-# The Docker registry from where we pull the OpenShift Enterprise Docker image
-REDHAT_DOCKER_REGISTRY="registry.access.redhat.com"
-REDHAT_INTERNAL_DOCKER_REGISTRY="rcm-img-docker01.build.eng.bos.redhat.com:5001"
 
 Vagrant.configure(2) do |config|
 
@@ -57,6 +56,7 @@ Vagrant.configure(2) do |config|
   end
 
   config.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
+#  config.vm.hostname = "#{PUBLIC_HOST}"
 
   unless Vagrant.has_plugin?('vagrant-registration')
     raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
@@ -76,8 +76,8 @@ Vagrant.configure(2) do |config|
     raise Vagrant::Errors::VagrantError.new, NO_ADBINFO_ERROR
   end
 
-  config.vm.provision :shell, :path => "./scripts/configure_docker.sh", :args => "#{REDHAT_DOCKER_REGISTRY} #{REDHAT_INTERNAL_DOCKER_REGISTRY}"
-  config.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{REDHAT_DOCKER_REGISTRY} #{PUBLIC_ADDRESS}"
+  config.vm.provision :shell, :path => "./scripts/configure_docker.sh"
+  config.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{PUBLIC_ADDRESS} #{PUBLIC_HOST}"
 
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
     echo
@@ -89,32 +89,9 @@ Vagrant.configure(2) do |config|
     echo
     echo "To become a cluster-admin, add '--config' to oc commands:"
     echo "$ vagrant ssh"
-    echo "$ oc status --config=${OPENSHIFT_DIR}/admin.kubeconfig"
+    echo "$ oc status --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig"
     echo
-    echo "To browse the OpenShift API documentation, follow this link:"
-    echo "http://openshift3swagger-claytondev.rhcloud.com"
-    echo
-    echo "Then enter this URL:"
-    echo https://#{PUBLIC_ADDRESS}:8443/swaggerapi/oapi/v1
-    echo "."
   SHELL
 
 end
 
-module OS
-    def OS.windows?
-        (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
-    end
-
-    def OS.mac?
-        (/darwin/ =~ RUBY_PLATFORM) != nil
-    end
-
-    def OS.unix?
-        !OS.windows?
-    end
-
-    def OS.linux?
-        OS.unix? and not OS.mac?
-    end
-end

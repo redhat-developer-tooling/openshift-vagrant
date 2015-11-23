@@ -2,8 +2,8 @@
 
 # Prepare, configure and start OpenShift
 #
-# $1 : Public Red Hat Docker registory host
-# $2 : Public IP Address
+# $1 : Public IP Address
+# $2 : Public host name
 
 set -o pipefail
 set -o nounset
@@ -13,6 +13,9 @@ export OSE_IMAGE_NAME=openshift3/ose
 export ORIGIN_DIR="/var/lib/origin"
 export OPENSHIFT_DIR=${ORIGIN_DIR}/openshift.local.config/master
 export KUBECONFIG=${OPENSHIFT_DIR}/admin.kubeconfig
+
+# The Docker registry from where we pull the OpenShift Enterprise Docker image
+export REDHAT_DOCKER_REGISTRY="registry.access.redhat.com"
 
 ########################################################################
 # Helper function to start OpenShift as container
@@ -50,8 +53,8 @@ if [ $? -eq 0 ]; then
 	echo "[INFO] Skipping pull of OpenShift image "
 else
 	echo "[INFO] Pulling ${OSE_IMAGE_NAME} Docker image ..."
-	docker pull $1/${OSE_IMAGE_NAME}
-	docker tag $1/${OSE_IMAGE_NAME} openshift3/ose
+	docker pull ${REDHAT_DOCKER_REGISTRY}/${OSE_IMAGE_NAME}
+	docker tag ${REDHAT_DOCKER_REGISTRY}/${OSE_IMAGE_NAME} openshift3/ose
 fi
 
 # Copy OpenShift CLI tools to the VM
@@ -83,7 +86,7 @@ done
 # First start OpenShift to just write the config files
 echo "[INFO] Preparing OpenShift config ..."
 start_ose --write-config=${ORIGIN_DIR}/openshift.local.config
-for i in {1..5}; do
+for i in {1..6}; do
   if [ ! -f ${OPENSHIFT_DIR}/master-config.yaml ]; then
     echo "Waiting for OpenShift config files to be created ..."
     sleep 5
@@ -98,10 +101,10 @@ if [ ! -f ${OPENSHIFT_DIR}/master-config.yaml ]; then
 fi
 
 # Now we need to make some adjustments to the config
-sed -i.orig -e "s/\(.*masterPublicURL:\).*/\1 https:\/\/$2:8443/" ${OPENSHIFT_DIR}/master-config.yaml
-sed -i.orig -e "s/\(.*publicURL:\).*/\1 https:\/\/$2:8443\/console\//" ${OPENSHIFT_DIR}/master-config.yaml
-sed -i.orig -e "s/\(.*assetPublicURL:\).*/\1 https:\/\/$2:8443\/console\//" ${OPENSHIFT_DIR}/master-config.yaml
-sed -i.orig -e "s/\(.*subdomain:\).*/\1 pdk.10.1.2.2.xip.io/" ${OPENSHIFT_DIR}/master-config.yaml
+sed -i.orig -e "s/\(.*subdomain:\).*/\1 $2/" ${OPENSHIFT_DIR}/master-config.yaml \
+-e "s/\(.*masterPublicURL:\).*/\1 https:\/\/$1:8443/g" \
+-e "s/\(.*publicURL:\).*/\1 https:\/\/$1:8443\/console\//g" \
+-e "s/\(.*assetPublicURL:\).*/\1 https:\/\/$1:8443\/console\//g"
 
 # Remove the container
 rm_ose_container
@@ -111,24 +114,33 @@ echo "[INFO] Starting OpenShift server ..."
 start_ose --master-config="${ORIGIN_DIR}/openshift.local.config/master/master-config.yaml" \
 --node-config="${ORIGIN_DIR}/openshift.local.config/node-localhost.localdomain/node-config.yaml" > /dev/null 2>&1
 
-# Give OpenShift 15 seconds to start
-sleep 15
+# Give OpenShift time to start
+for i in {1..6}
+do
+  curl -ksSf https://10.0.2.15:8443/api
+  if [ $? -ne 0 ]; then
+    echo "Waiting for OpenShift sever to come up ..."
+    sleep 5
+  else
+    break
+  fi
+done
 
-# Makte sure kubeconfig is writable
-chmod go+r ${KUBECONFIG}
-
-# Check whether OpenShift is running
-state=$(docker inspect -f "{{.State.Running}}" ose)
-if [[ "${state}" != "true" ]]; then
+# Final check whether OpenShift is running
+curl -ksSf https://10.0.2.15:8443/api
+if [ $? -ne 0 ]; then
   >&2 echo "[ERROR] OpenShift failed to start:"
   docker logs ose
   exit 1
 fi
 
+# Make sure kubeconfig is writable
+chmod go+r ${KUBECONFIG}
+
 # Create Docker Registry
 if [ ! -f ${ORIGIN_DIR}/configured.registry ]; then
   echo "[INFO] Configuring Docker Registry ..."
-  oadm registry --create --credentials=${OPENSHIFT_DIR}/openshift-registry.kubeconfig
+  oadm registry --create --credentials=${OPENSHIFT_DIR}/openshift-registry.kubeconfig || exit 1
   touch ${ORIGIN_DIR}/configured.registry
 fi
 
@@ -189,9 +201,5 @@ fi
 if [ ! -f ${ORIGIN_DIR}/configured.user ]; then
   echo "[INFO] Creating 'test-admin' user and 'test' project ..."
   oadm policy add-role-to-user view test-admin --config=${OPENSHIFT_DIR}/admin.kubeconfig
-  oc login https://${2}:8443 -u test-admin -p test \
-    --certificate-authority=${OPENSHIFT_DIR}/ca.crt &>/dev/null
-  oc new-project test --display-name="OpenShift 3 Sample" \
-    --description="This is an example project to demonstrate OpenShift v3" &>/dev/null
   sudo touch ${ORIGIN_DIR}/configured.user
 fi

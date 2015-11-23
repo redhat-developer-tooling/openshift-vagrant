@@ -37,9 +37,9 @@ virtual machine:
 * __Active VPN connection during the creation and provisioning of the VM__
 * [VirtualBox](https://www.virtualbox.org/) installed
 * [Vagrant](https://www.vagrantup.com/) installed
-* [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) installed
+* [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) _(>=1.0.0)_ installed
  * Run `vagrant plugin install vagrant-registration` to install plugin
-* [vagrant-adbinfo plugin](https://github.com/bexelbie/vagrant-adbinfo) installed
+* [vagrant-adbinfo plugin](https://github.com/bexelbie/vagrant-adbinfo) _(>=0.0.6)_ installed
  * Run `vagrant plugin install vagrant-adbinfo` to install plugin
 
 <a name="how-do-i-run-it"></a>
@@ -62,13 +62,16 @@ to update to the latest working URL.__
 <a name="how-to-access-the-vms-docker-daemon"></a>
 ### How to access the VM's Docker daemon
 
-Run `vagrant adbinfo`. Ignore all values except _DOCKER_MACHINE_NAME_ and
-set the following environment variables in your shell:
+Run `vagrant adbinfo`:
 
 ```
-export DOCKER_HOST=tcp://10.1.2.2:2376
-export DOCKER_MACHINE_NAME=<machine-name>
+$ eval "$(vagrant adbinfo)"
+$ unset DOCKER_TLS_VERIFY
 ```
+
+Due to an [issue](projectatomic/adb-atomic-developer-bundle#127) with the generated
+CDK certificates, this Vagrant setup disables TLS verification.
+For this reason we are unsetting _DOCKER_TLS_VERIFY_ for now.
 
 <a name="known-issues"></a>
 ### Known issues
