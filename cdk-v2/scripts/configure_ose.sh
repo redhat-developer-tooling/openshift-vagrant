@@ -39,7 +39,6 @@ start_ose() {
 ########################################################################
 rm_ose_container() {
 	if docker inspect ose &>/dev/null; then
-		echo "[INFO] Removing existing OpenShift container ..."
 		docker rm -f -v ose > /dev/null 2>&1
 	fi
 }
@@ -85,10 +84,10 @@ done
 
 # First start OpenShift to just write the config files
 echo "[INFO] Preparing OpenShift config ..."
-start_ose --write-config=${ORIGIN_DIR}/openshift.local.config
+start_ose --write-config=${ORIGIN_DIR}/openshift.local.config > /dev/null 2>&1
 for i in {1..6}; do
   if [ ! -f ${OPENSHIFT_DIR}/master-config.yaml ]; then
-    echo "Waiting for OpenShift config files to be created ..."
+    echo "[INFO] Waiting for OpenShift config files to be created ..."
     sleep 5
   else
     break
@@ -101,6 +100,7 @@ if [ ! -f ${OPENSHIFT_DIR}/master-config.yaml ]; then
 fi
 
 # Now we need to make some adjustments to the config
+echo "[INFO] Configuring OpenShift via ${OPENSHIFT_DIR}/master-config.yaml ..."
 sed -i.orig -e "s/\(.*subdomain:\).*/\1 $2/" ${OPENSHIFT_DIR}/master-config.yaml \
 -e "s/\(.*masterPublicURL:\).*/\1 https:\/\/$1:8443/g" \
 -e "s/\(.*publicURL:\).*/\1 https:\/\/$1:8443\/console\//g" \
@@ -117,9 +117,9 @@ start_ose --master-config="${ORIGIN_DIR}/openshift.local.config/master/master-co
 # Give OpenShift time to start
 for i in {1..6}
 do
-  curl -ksSf https://10.0.2.15:8443/api
+  curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    echo "Waiting for OpenShift sever to come up ..."
+    echo "[INFO]  Waiting for OpenShift sever to come up ..."
     sleep 5
   else
     break
@@ -127,7 +127,7 @@ do
 done
 
 # Final check whether OpenShift is running
-curl -ksSf https://10.0.2.15:8443/api
+curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
 if [ $? -ne 0 ]; then
   >&2 echo "[ERROR] OpenShift failed to start:"
   docker logs ose
