@@ -55,10 +55,6 @@ Enterprise instance. There are currently no scripts to start/stop OpenShift.
 To restart OpenShift after an `vagrant halt`, run `vagrant up && vagrant provision`.
 Provisioning steps which have already occurred will be skipped.
 
-__Note, the used VM boxes are downloaded from brew. This links are temporary. If you
-are having problems downloading the vagrant boxes, let us know. We will make sure
-to update to the latest working URL.__
-
 <a name="how-to-access-the-vms-docker-daemon"></a>
 ### How to access the VM's Docker daemon
 
