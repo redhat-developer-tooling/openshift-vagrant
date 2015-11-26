@@ -77,10 +77,10 @@ Vagrant.configure(2) do |config|
     raise Vagrant::Errors::VagrantError.new, NO_ADBINFO_ERROR
   end
 
-  config.vm.provision :shell, :path => "./scripts/configure_docker.sh"
-  config.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{PUBLIC_ADDRESS} #{PUBLIC_HOST}"
+  config.vm.provision :shell, :name => "Prepare Docker Daemon", :path => "./scripts/configure_docker.sh"
+  config.vm.provision :shell, :name => "Provision OpenShift", :path => "./scripts/configure_ose.sh", :args => "#{PUBLIC_ADDRESS} #{PUBLIC_HOST}"
 
-  config.vm.provision "shell", privileged: false, inline: <<-SHELL
+  config.vm.provision "shell", :name => "Echo settings", inline: <<-SHELL
     echo
     echo "You can now access OpenShift console on: https://#{PUBLIC_ADDRESS}:8443/console"
     echo

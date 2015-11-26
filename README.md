@@ -4,7 +4,7 @@
 
 - [What is it?](#what-is-it)
 - [Prerequisites](#prerequisites)
-- [How do I run it?](#how-do-i-run-it)
+- [How do I run it](#how-do-i-run-it)
   - [How to access the VM's Docker daemon](#how-to-access-the-vms-docker-daemon)
   - [Known issues](#known-issues)
 - [OpenShift Logins](#openshift-logins)
@@ -43,7 +43,7 @@ virtual machine:
  * Run `vagrant plugin install vagrant-adbinfo` to install plugin
 
 <a name="how-do-i-run-it"></a>
-## How do I run it?
+## How do I run it
 
     $ cd cdk-v2
     $ export SUB_USERNAME=<your-subscription-username>
