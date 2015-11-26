@@ -44,6 +44,25 @@ rm_ose_container() {
 }
 
 ########################################################################
+# Helper function to wait for OpenShift config file generation
+########################################################################
+wait_for_config_files() {
+  for i in {1..6}; do
+    if [ ! -f ${1} ] || [ ! -f ${2} ]; then
+      echo "[INFO] Waiting for OpenShift config files to be created ..."
+      sleep 5
+    else
+      break
+    fi
+  done
+  if [ ! -f ${1} ] || [ ! -f ${2} ]; then
+    >&2 echo "[ERROR] Unable to create OpenShift config files"
+    docker logs ose
+    exit 1
+  fi
+}
+
+########################################################################
 # Main
 ########################################################################
 # Check whether a OpenShift image exists and if not pull and tag it
@@ -84,24 +103,14 @@ done
 
 # First start OpenShift to just write the config files
 echo "[INFO] Preparing OpenShift config ..."
+master_config=${OPENSHIFT_DIR}/master-config.yaml
+node_config=${ORIGIN_DIR}/openshift.local.config/node-localhost.localdomain/node-config.yaml
 start_ose --write-config=${ORIGIN_DIR}/openshift.local.config > /dev/null 2>&1
-for i in {1..6}; do
-  if [ ! -f ${OPENSHIFT_DIR}/master-config.yaml ]; then
-    echo "[INFO] Waiting for OpenShift config files to be created ..."
-    sleep 5
-  else
-    break
-  fi
-done
-if [ ! -f ${OPENSHIFT_DIR}/master-config.yaml ]; then
-  >&2 echo "[ERROR] Unable to create OpenShift config files"
-  docker logs ose
-  exit 1
-fi
+wait_for_config_files ${master_config} ${node_config}
 
 # Now we need to make some adjustments to the config
-echo "[INFO] Configuring OpenShift via ${OPENSHIFT_DIR}/master-config.yaml ..."
-sed -i.orig -e "s/\(.*subdomain:\).*/\1 $2/" ${OPENSHIFT_DIR}/master-config.yaml \
+echo "[INFO] Configuring OpenShift via ${master_config} ..."
+sed -i.orig -e "s/\(.*subdomain:\).*/\1 $2/" ${master_config} \
 -e "s/\(.*masterPublicURL:\).*/\1 https:\/\/$1:8443/g" \
 -e "s/\(.*publicURL:\).*/\1 https:\/\/$1:8443\/console\//g" \
 -e "s/\(.*assetPublicURL:\).*/\1 https:\/\/$1:8443\/console\//g"
@@ -111,15 +120,14 @@ rm_ose_container
 
 # Now we start the server pointing to the prepared config files
 echo "[INFO] Starting OpenShift server ..."
-start_ose --master-config="${ORIGIN_DIR}/openshift.local.config/master/master-config.yaml" \
---node-config="${ORIGIN_DIR}/openshift.local.config/node-localhost.localdomain/node-config.yaml" > /dev/null 2>&1
+start_ose --master-config="${master_config}" --node-config="${node_config}" > /dev/null 2>&1
 
 # Give OpenShift time to start
 for i in {1..6}
 do
   curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    echo "[INFO]  Waiting for OpenShift sever to come up ..."
+    echo "[INFO] Waiting for OpenShift sever to come up ..."
     sleep 5
   else
     break
