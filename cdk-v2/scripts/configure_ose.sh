@@ -47,9 +47,10 @@ rm_ose_container() {
 # Helper function to wait for OpenShift config file generation
 ########################################################################
 wait_for_config_files() {
+  echo "[INFO] Waiting for OpenShift config files to be created"
   for i in {1..6}; do
     if [ ! -f ${1} ] || [ ! -f ${2} ]; then
-      echo "[INFO] Waiting for OpenShift config files to be created ..."
+      echo "[INFO] ..."
       sleep 5
     else
       break
@@ -102,14 +103,14 @@ for d in ${dirs[@]}; do
 done
 
 # First start OpenShift to just write the config files
-echo "[INFO] Preparing OpenShift config ..."
+echo "[INFO] Preparing OpenShift config"
 master_config=${OPENSHIFT_DIR}/master-config.yaml
 node_config=${ORIGIN_DIR}/openshift.local.config/node-localhost.localdomain/node-config.yaml
 start_ose --write-config=${ORIGIN_DIR}/openshift.local.config > /dev/null 2>&1
 wait_for_config_files ${master_config} ${node_config}
 
 # Now we need to make some adjustments to the config
-echo "[INFO] Configuring OpenShift via ${master_config} ..."
+echo "[INFO] Configuring OpenShift via ${master_config}"
 sed -i.orig -e "s/\(.*subdomain:\).*/\1 $2/" ${master_config} \
 -e "s/\(.*masterPublicURL:\).*/\1 https:\/\/$1:8443/g" \
 -e "s/\(.*publicURL:\).*/\1 https:\/\/$1:8443\/console\//g" \
@@ -119,15 +120,16 @@ sed -i.orig -e "s/\(.*subdomain:\).*/\1 $2/" ${master_config} \
 rm_ose_container
 
 # Now we start the server pointing to the prepared config files
-echo "[INFO] Starting OpenShift server ..."
+echo "[INFO] Starting OpenShift server"
 start_ose --master-config="${master_config}" --node-config="${node_config}" > /dev/null 2>&1
 
 # Give OpenShift time to start
+echo "[INFO] Waiting for OpenShift sever to come up ..."
 for i in {1..6}
 do
   curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
   if [ $? -ne 0 ]; then
-    echo "[INFO] Waiting for OpenShift sever to come up ..."
+    echo "[INFO] ..."
     sleep 5
   else
     break
@@ -147,14 +149,14 @@ chmod go+r ${KUBECONFIG}
 
 # Create Docker Registry
 if [ ! -f ${ORIGIN_DIR}/configured.registry ]; then
-  echo "[INFO] Configuring Docker Registry ..."
+  echo "[INFO] Configuring Docker Registry"
   oadm registry --create --credentials=${OPENSHIFT_DIR}/openshift-registry.kubeconfig || exit 1
   touch ${ORIGIN_DIR}/configured.registry
 fi
 
 # For router, we have to create service account first and then use it for router creation.
 if [ ! -f ${ORIGIN_DIR}/configured.router ]; then
-  echo "[INFO] Configuring HAProxy router ..."
+  echo "[INFO] Configuring HAProxy router"
   echo '{"kind":"ServiceAccount","apiVersion":"v1","metadata":{"name":"router"}}' \
     | oc create -f -
   oc get scc privileged -o json \
@@ -165,42 +167,49 @@ if [ ! -f ${ORIGIN_DIR}/configured.router ]; then
   touch ${ORIGIN_DIR}/configured.router
 fi
 
-# Downloading OpenShift application templates
-EXAMPLES_BASE=/opt/openshift/templates
-if [ ! -d "${EXAMPLES_BASE}"  ]; then
-  echo "[INFO] Downloading OpenShift and xPaaS templates ..."
-  temp_dir=$(mktemp -d)
-  pushd ${temp_dir} >/dev/null
-  mkdir -p ${EXAMPLES_BASE}/{db-templates,image-streams,quickstart-templates,xpaas-streams,xpaas-templates}
-  curl -sL https://github.com/openshift/origin/archive/master.zip -o origin-master.zip
-  curl -sL https://github.com/openshift/nodejs-ex/archive/master.zip -o nodejs-ex-master.zip
-  curl -sL https://github.com/jboss-openshift/application-templates/archive/ose-v1.0.2.zip -o application-templates-ose-v1.0.2.zip
-  unzip -q nodejs-ex-master.zip
-  unzip -q origin-master.zip
-  unzip -q application-templates-ose-v1.0.2.zip
-  cp origin-master/examples/db-templates/* ${EXAMPLES_BASE}/db-templates/
-  cp origin-master/examples/jenkins/jenkins-*template.json ${EXAMPLES_BASE}/quickstart-templates/
-  cp origin-master/examples/image-streams/* ${EXAMPLES_BASE}/image-streams/
-  cp nodejs-ex-master/openshift/templates/* ${EXAMPLES_BASE}/quickstart-templates/
-  cp -R application-templates-ose-v1.0.2/* ${EXAMPLES_BASE}/xpaas-templates/
-  mv application-templates-ose-v1.0.2/jboss-image-streams.json ${EXAMPLES_BASE}/xpaas-streams/
-  rm -f /opt/openshift/templates/xpaas-streams/jboss-image-streams.json
-  rm -f /opt/openshift/templates/image-streams/image-streams-centos7.json
-  rm -f /opt/openshift/templates/xpaas-templates/eap/eap6-https-sti.json
-  rm -f /opt/openshift/templates/xpaas-templates/webserver/jws-tomcat8-basic-sti.json
-  rm -f /opt/openshift/templates/xpaas-templates/webserver/jws-tomcat7-https-sti.json
-  popd >/dev/null
-  rm -rf ${temp_dir}
-else
-  echo "[INFO] Skipping download of OpenShift templates. ${EXAMPLES_BASE} already exists"
-fi
-
-# Importing downloaded templates into OpenShift
+# Installing templates into OpenShift
 if [ ! -f ${ORIGIN_DIR}/configured.templates ]; then
-  echo "[INFO] Installing OpenShift templates ..."
-  for name in $(find /opt/openshift/templates -name '*.json')
-  do
-    oc create -f $name -n openshift >/dev/null
+  echo "[INFO] Installing OpenShift templates"
+
+  # TODO - These list must be verified and completed for a official release
+  # Currently templates are sources from three main repositories
+  # - openshift/origin
+  # - openshift/nodejs-ex
+  # - jboss-openshift/application-templates
+  ose_tag=ose-v1.1.0
+  template_list=(
+    # Image streams
+    https://raw.githubusercontent.com/openshift/origin/master/examples/image-streams/image-streams-rhel7.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/jboss-image-streams.json
+    # DB templates
+    https://raw.githubusercontent.com/openshift/origin/master/examples/db-templates/mongodb-ephemeral-template.json
+    https://raw.githubusercontent.com/openshift/origin/master/examples/db-templates/mongodb-persistent-template.json
+    https://raw.githubusercontent.com/openshift/origin/master/examples/db-templates/mysql-ephemeral-template.json
+    https://raw.githubusercontent.com/openshift/origin/master/examples/db-templates/mysql-persistent-template.json
+    https://raw.githubusercontent.com/openshift/origin/master/examples/db-templates/postgresql-ephemeral-template.json
+    https://raw.githubusercontent.com/openshift/origin/master/examples/db-templates/postgresql-persistent-template.json
+    # Jenkins
+    https://raw.githubusercontent.com/openshift/origin/master/examples/jenkins/jenkins-ephemeral-template.json
+    https://raw.githubusercontent.com/openshift/origin/master/examples/jenkins/jenkins-persistent-template.json
+    # Node.js
+    https://raw.githubusercontent.com/openshift/nodejs-ex/master/openshift/templates/nodejs-mongodb.json
+    https://raw.githubusercontent.com/openshift/nodejs-ex/master/openshift/templates/nodejs.json
+    # EAP
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-amq-persistent-s2i.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-amq-s2i.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-basic-s2i.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-https-s2i.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-mongodb-persistent-s2i.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-mongodb-s2i.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-mysql-persistent-s2i.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-mysql-s2i.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-postgresql-persistent-s2i.json
+    https://raw.githubusercontent.com/jboss-openshift/application-templates/${ose_tag}/eap/eap64-postgresql-s2i.json
+  )
+
+  for template in ${template_list[@]}; do
+    echo "[INFO] Importing template ${template}"
+    oc create -f $template -n openshift >/dev/null
   done
   touch ${ORIGIN_DIR}/configured.templates
 fi
