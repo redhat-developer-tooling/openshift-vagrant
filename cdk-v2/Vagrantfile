@@ -9,6 +9,10 @@
 # * Have valid RH employee subscription account
 # * Have 'vagrant-adbinfo' plugin installed
 
+Vagrant.require_version ">= 1.7.4"
+# Added since version 1.7.2 complains about "name" should not exist.
+
+
 # General configuration:
 
 # URLs from where to fetch the Vagrant Virtualbox images
