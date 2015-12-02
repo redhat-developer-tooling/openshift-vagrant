@@ -1,0 +1,2 @@
+openshift.auth.scheme=Basic
+openshift.auth.username=test-admin
