@@ -32,7 +32,7 @@ cat << EOF > /etc/sysconfig/docker
 # Configured by Vagrant
 DOCKER_CERT_PATH=/etc/docker
 INSECURE_REGISTRY='--insecure-registry ${REDHAT_INTERNAL_DOCKER_REGISTRY} --insecure-registry 172.30.0.0/16'
-OPTIONS="--selinux-enabled -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --tlscacert=/etc/docker/ca.pem --tlscert=/etc/docker/server-cert.pem --tlskey=/etc/docker/server-key.pem"
+OPTIONS="--selinux-enabled -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --tlscacert=/etc/docker/ca.pem --tlscert=/etc/docker/server-cert.pem --tlskey=/etc/docker/server-key.pem --tlsverify"
 ADD_REGISTRY='--add-registry ${REDHAT_DOCKER_REGISTRY} --add-registry ${REDHAT_INTERNAL_DOCKER_REGISTRY}'
 EOF
 
