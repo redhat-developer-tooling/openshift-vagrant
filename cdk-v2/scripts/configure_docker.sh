@@ -16,6 +16,10 @@ REDHAT_DOCKER_REGISTRY="registry.access.redhat.com"
 # TODO - Deployer and router come from this repo. For now it is needed.
 REDHAT_INTERNAL_DOCKER_REGISTRY="rcm-img-docker01.build.eng.bos.redhat.com:5001"
 
+# To allow push/pull from docker-registry.usersys.redhat.com
+EXTRA_REGISTRIES="--insecure-registry docker-registry.usersys.redhat.com"
+
+
 if [ -f /opt/docker_selinux ]; then
 	echo "[INFO] Skipping Docker configuration. Already done."
 	exit 0;
@@ -31,7 +35,7 @@ echo "[INFO] Enabling Docker registries ${REDHAT_DOCKER_REGISTRY} and ${REDHAT_I
 cat << EOF > /etc/sysconfig/docker
 # Configured by Vagrant
 DOCKER_CERT_PATH=/etc/docker
-INSECURE_REGISTRY='--insecure-registry ${REDHAT_INTERNAL_DOCKER_REGISTRY} --insecure-registry 172.30.0.0/16'
+INSECURE_REGISTRY='--insecure-registry ${REDHAT_INTERNAL_DOCKER_REGISTRY} --insecure-registry 172.30.0.0/16 ${EXTRA_REGISTRIES}'
 OPTIONS="--selinux-enabled -H tcp://0.0.0.0:2376 -H unix:///var/run/docker.sock --tlscacert=/etc/docker/ca.pem --tlscert=/etc/docker/server-cert.pem --tlskey=/etc/docker/server-key.pem"
 ADD_REGISTRY='--add-registry ${REDHAT_DOCKER_REGISTRY} --add-registry ${REDHAT_INTERNAL_DOCKER_REGISTRY}'
 EOF
