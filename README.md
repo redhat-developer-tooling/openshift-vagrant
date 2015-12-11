@@ -39,7 +39,7 @@ virtual machine:
 * [Vagrant](https://www.vagrantup.com/) installed
 * [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) _(>=1.0.0)_ installed
  * Run `vagrant plugin install vagrant-registration` to install plugin
-* [vagrant-adbinfo plugin](https://github.com/bexelbie/vagrant-adbinfo) _(>=0.0.6)_ installed
+* [vagrant-adbinfo plugin](https://github.com/bexelbie/vagrant-adbinfo) _(>=0.0.9)_ installed
  * Run `vagrant plugin install vagrant-adbinfo` to install plugin
 
 <a name="how-do-i-run-it"></a>
