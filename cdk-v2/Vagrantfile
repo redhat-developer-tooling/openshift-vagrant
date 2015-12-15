@@ -23,18 +23,17 @@ PUBLIC_ADDRESS="10.1.2.2"
 # The public hostname for the box. Uses xip.io to have zero configuration routes
 PUBLIC_HOST="cdk.#{PUBLIC_ADDRESS}.xip.io"
 
-SUBSCRIPTION_ERROR = "
-    You have to supply your Red Hat subscription credentials to run this Vagrant box.
+SUBSCRIPTION_INFO = "
+    Red Hat subscription credentials are needed for this VM.
+    You can supply them interactively or by setting environment variables.
+    Set these environment variables to your subscription username/password to avoid interactive registration:
 
-    Please run:
-    $ vagrant plugin install vagrant-registration
-
-    Then set these environment variable to your subscription username/password:
     $ export SUB_USERNAME=rhn-username
     $ export SUB_PASSWORD=password
   "
 
 NO_ADBINFO_ERROR = "vagrant-adbinfo plugin is not installed, run `vagrant plugin install vagrant-adbinfo` to install the plugin."
+NO_VAGRANT_REGISTRATION_ERROR = "vagrant-registration plugin is not installed, run `vagrant plugin install vagrant-registration` to install the plugin."
 
 Vagrant.configure(2) do |config|
 
@@ -57,24 +56,24 @@ Vagrant.configure(2) do |config|
   end
 
   config.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
-#  config.vm.hostname = "#{PUBLIC_HOST}"
+
+  unless Vagrant.has_plugin?("vagrant-adbinfo")
+    raise Vagrant::Errors::VagrantError.new, NO_ADBINFO_ERROR
+  end
 
   unless Vagrant.has_plugin?('vagrant-registration')
-    raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
+    raise Vagrant::Errors::VagrantError.new, NO_VAGRANT_REGISTRATION_ERROR
   end
 
   config.registration.username    = "#{ENV['SUB_USERNAME']}"
   config.registration.password    = "#{ENV['SUB_PASSWORD']}"
   config.registration.auto_attach = true
 
-  if config.registration.username.strip.empty? ||
-     config.registration.password.strip.empty?
-    raise Vagrant::Errors::VagrantError.new, SUBSCRIPTION_ERROR
-  end
-
-  # check if plugin is installed on system
-  unless Vagrant.has_plugin?("vagrant-adbinfo")
-    raise Vagrant::Errors::VagrantError.new, NO_ADBINFO_ERROR
+  case ARGV[0]
+  when "up", "halt"
+    if config.registration.username.strip.empty? || config.registration.password.strip.empty?
+      puts SUBSCRIPTION_INFO
+    end
   end
 
   config.vm.provision :shell, :path => "./scripts/configure_docker.sh"
