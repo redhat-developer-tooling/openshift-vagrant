@@ -9,13 +9,15 @@ set -o pipefail
 set -o nounset
 #set -o xtrace
 
-export OSE_IMAGE_NAME=openshift3/ose
 export ORIGIN_DIR="/var/lib/origin"
 export OPENSHIFT_DIR=${ORIGIN_DIR}/openshift.local.config/master
 export KUBECONFIG=${OPENSHIFT_DIR}/admin.kubeconfig
 
-# The Docker registry from where we pull the OpenShift Enterprise Docker image
-export REDHAT_DOCKER_REGISTRY="registry.access.redhat.com"
+# The Docker registry from where we pull the OpenShift Enterprise Docker images
+export OSE_IMAGE_NAME=openshift3/ose
+export OSE_VERSION=v3.1.0.3
+export OPENSHIFT_IMAGE_REGISTRY="rcm-img-docker01.build.eng.bos.redhat.com:5001"
+#export OPENSHIFT_IMAGE_REGISTRY="registry.access.redhat.com"
 
 ########################################################################
 # Helper function to start OpenShift as container
@@ -47,10 +49,8 @@ rm_ose_container() {
 # Helper function to wait for OpenShift config file generation
 ########################################################################
 wait_for_config_files() {
-  echo "[INFO] Waiting for OpenShift config files to be created"
   for i in {1..6}; do
     if [ ! -f ${1} ] || [ ! -f ${2} ]; then
-      echo "[INFO] ..."
       sleep 5
     else
       break
@@ -64,23 +64,58 @@ wait_for_config_files() {
 }
 
 ########################################################################
+# Helper function to wait for OpenShift startup
+########################################################################
+wait_for_openshift() {
+  # Give OpenShift time to start
+  for i in {1..6}
+  do
+    curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+      sleep 5
+    else
+      break
+    fi
+  done
+
+  # Final check whether OpenShift is running
+  curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    >&2 echo "[ERROR] OpenShift failed to start:"
+    docker logs ose
+    exit 1
+  fi
+}
+
+########################################################################
+# Helper function to pre-pull Docker images
+#
+# $1 image name
+########################################################################
+cache_image() {
+  docker inspect ${1} &>/dev/null
+  if [ ! $? -eq 0 ]; then
+    echo "[INFO] Caching Docker image ${1}"
+    docker pull ${OPENSHIFT_IMAGE_REGISTRY}/${1}
+  fi
+}
+
+########################################################################
 # Main
 ########################################################################
-# Check whether a OpenShift image exists and if not pull and tag it
-docker inspect openshift3/ose &>/dev/null
-if [ $? -eq 0 ]; then
-	echo "[INFO] Skipping pull of OpenShift image "
-else
-	echo "[INFO] Pulling ${OSE_IMAGE_NAME} Docker image ..."
-	docker pull ${REDHAT_DOCKER_REGISTRY}/${OSE_IMAGE_NAME}
-	docker tag ${REDHAT_DOCKER_REGISTRY}/${OSE_IMAGE_NAME} openshift3/ose
-fi
+# Pre-pull some images in order to speed up the OpenShift out of the box experience
+# See also https://github.com/projectatomic/adb-atomic-developer-bundle/issues/160
+cache_image openshift3/ose-pod:${OSE_VERSION}
+cache_image openshift3/ose-haproxy-router:${OSE_VERSION}
+cache_image openshift3/ose-docker-registry:${OSE_VERSION}
+cache_image openshift3/ose-sti-builder:${OSE_VERSION}
 
 # Copy OpenShift CLI tools to the VM
 binaries=(oc oadm)
 for n in ${binaries[@]}; do
 	[ -f /usr/bin/${n} ] && continue
 	echo "[INFO] Copying the OpenShift '${n}' binary to host /usr/bin/${n}"
+
 	docker run --rm --entrypoint=/bin/cat openshift3/ose /usr/bin/${n} > /usr/bin/${n}
 	chmod +x /usr/bin/${n}
 done
@@ -89,67 +124,53 @@ echo "export OPENSHIFT_DIR=#{ORIGIN_DIR}/openshift.local.config/master" > /etc/p
 # Check whether OpenShift is running, if so skip any further provisioning
 state=$(docker inspect -f "{{.State.Running}}" ose 2>/dev/null)
 if [ "${state}" == "true" ]; then
-	echo "[INFO] Skipping OpenShift configuration. Already running"
+	echo "[INFO] Openshift already running"
 	exit 0;
 fi
 
 # In a re-provision scenario we want to make sure the old container is removed
 rm_ose_container
 
-# Prepare directories for bind-mounting
-dirs=(openshift.local.volumes openshift.local.config openshift.local.etcd)
-for d in ${dirs[@]}; do
-	mkdir -p ${ORIGIN_DIR}/${d} && chcon -Rt svirt_sandbox_file_t ${ORIGIN_DIR}/${d}
-done
-
-# First start OpenShift to just write the config files
-echo "[INFO] Preparing OpenShift config"
 master_config=${OPENSHIFT_DIR}/master-config.yaml
 node_config=${ORIGIN_DIR}/openshift.local.config/node-localhost.localdomain/node-config.yaml
-start_ose --write-config=${ORIGIN_DIR}/openshift.local.config > /dev/null 2>&1
-wait_for_config_files ${master_config} ${node_config}
+if [ ! -f $master_config ]; then
+  # Prepare directories for bind-mounting
+  dirs=(openshift.local.volumes openshift.local.config openshift.local.etcd)
+  for d in ${dirs[@]}; do
+    mkdir -p ${ORIGIN_DIR}/${d} && chcon -Rt svirt_sandbox_file_t ${ORIGIN_DIR}/${d}
+  done
 
-# Now we need to make some adjustments to the config
-echo "[INFO] Configuring OpenShift via ${master_config}"
-sed -i.orig -e "s/\(.*subdomain:\).*/\1 $2/" ${master_config} \
--e "s/\(.*masterPublicURL:\).*/\1 https:\/\/$1:8443/g" \
--e "s/\(.*publicURL:\).*/\1 https:\/\/$1:8443\/console\//g" \
--e "s/\(.*assetPublicURL:\).*/\1 https:\/\/$1:8443\/console\//g"
+  # First start OpenShift to just write the config files
+  echo "[INFO] Preparing OpenShift config"
 
-# Remove the container
-rm_ose_container
+  start_ose --write-config=${ORIGIN_DIR}/openshift.local.config > /dev/null 2>&1
+  wait_for_config_files ${master_config} ${node_config}
+
+  # Now we need to make some adjustments to the config
+  echo "[INFO] Configuring OpenShift via ${master_config}"
+
+  sed -i.orig -e "s/\(.*subdomain:\).*/\1 $2/" ${master_config} \
+    -e "s/\(.*masterPublicURL:\).*/\1 https:\/\/$1:8443/g" \
+    -e "s/\(.*publicURL:\).*/\1 https:\/\/$1:8443\/console\//g" \
+    -e "s/\(.*assetPublicURL:\).*/\1 https:\/\/$1:8443\/console\//g"
+
+  # Remove the container
+  rm_ose_container
+fi
 
 # Now we start the server pointing to the prepared config files
 echo "[INFO] Starting OpenShift server"
 start_ose --master-config="${master_config}" --node-config="${node_config}" > /dev/null 2>&1
-
-# Give OpenShift time to start
-echo "[INFO] Waiting for OpenShift sever to come up ..."
-for i in {1..6}
-do
-  curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "[INFO] ..."
-    sleep 5
-  else
-    break
-  fi
-done
-
-# Final check whether OpenShift is running
-curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  >&2 echo "[ERROR] OpenShift failed to start:"
-  docker logs ose
-  exit 1
-fi
+wait_for_openshift
 
 # Make sure kubeconfig is writable
 chmod go+r ${KUBECONFIG}
 
-# Create Docker Registry
+# Create and expose Docker registry
+# https://docs.openshift.com/enterprise/3.0/install_config/install/docker_registry.html#exposing-the-registry
 if [ ! -f ${ORIGIN_DIR}/configured.registry ]; then
   echo "[INFO] Configuring Docker Registry"
+
   oadm registry --create --credentials=${OPENSHIFT_DIR}/openshift-registry.kubeconfig || exit 1
   touch ${ORIGIN_DIR}/configured.registry
 fi
@@ -157,14 +178,21 @@ fi
 # For router, we have to create service account first and then use it for router creation.
 if [ ! -f ${ORIGIN_DIR}/configured.router ]; then
   echo "[INFO] Configuring HAProxy router"
+
   echo '{"kind":"ServiceAccount","apiVersion":"v1","metadata":{"name":"router"}}' \
     | oc create -f -
   oc get scc privileged -o json \
     | sed '/\"users\"/a \"system:serviceaccount:default:router\",'  \
     | oc replace scc privileged -f -
-  oadm router --create --credentials=${OPENSHIFT_DIR}/openshift-router.kubeconfig \
+  oadm router --create \
+    --expose-metrics=true \
+    --stats-port=1936 \
+    --credentials=${OPENSHIFT_DIR}/openshift-router.kubeconfig \
     --service-account=router
   touch ${ORIGIN_DIR}/configured.router
+
+  registry_host_name="hub.$2"
+  oc expose service docker-registry --hostname ${registry_host_name}
 fi
 
 # Installing templates into OpenShift

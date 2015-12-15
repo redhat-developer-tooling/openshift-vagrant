@@ -76,7 +76,7 @@ Vagrant.configure(2) do |config|
     end
   end
 
-  config.vm.provision :shell, :path => "./scripts/configure_docker.sh"
+  config.vm.provision :shell, :path => "./scripts/configure_docker.sh", :args => "#{PUBLIC_HOST}"
   config.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{PUBLIC_ADDRESS} #{PUBLIC_HOST}"
 
   config.vm.provision "shell", inline: <<-SHELL

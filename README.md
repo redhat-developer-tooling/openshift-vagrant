@@ -4,13 +4,15 @@
 
 - [What is it?](#what-is-it)
 - [Prerequisites](#prerequisites)
-- [How do I run it](#how-do-i-run-it)
-  - [How to access the VM's Docker daemon](#how-to-access-the-vms-docker-daemon)
-  - [Known issues](#known-issues)
+- [How to run it](#how-to-run-it)
+- [How to access the VM's Docker daemon](#how-to-access-the-vms-docker-daemon)
+- [How to access the OpenShift registry](#how-to-access-the-openshift-registry)
 - [OpenShift Logins](#openshift-logins)
   - [Regular users](#regular-users)
   - [_test-admin_](#_test-admin_)
   - [Cluster admin](#cluster-admin)
+- [How to get HAProxy statistics](#how-to-get-haproxy-statistics)
+- [Known issues](#known-issues)
 - [Misc](#misc)
   - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
   - [How to test webhooks locally](#how-to-test-webhooks-locally)
@@ -45,8 +47,8 @@ virtual machine:
  * Ensure [PuTTY](http://www.putty.org/) utilities, including pscp, are installed and on the _Path_. See also vagrant-adbinfo issue [#20](https://github.com/projectatomic/vagrant-adbinfo/issues/20)
  * Ensure [Cygwin](https://www.cygwin.com/) is installed with rsync AND openssh. The default installation does not include these packages.
 
-<a name="how-do-i-run-it"></a>
-## How do I run it
+<a name="how-to-run-it"></a>
+## How to run it
 
     $ cd cdk-v2
     $ export SUB_USERNAME=<your-subscription-username>
@@ -59,7 +61,7 @@ To restart OpenShift after an `vagrant halt`, run `vagrant up && vagrant provisi
 Provisioning steps which have already occurred will be skipped.
 
 <a name="how-to-access-the-vms-docker-daemon"></a>
-### How to access the VM's Docker daemon
+## How to access the VM's Docker daemon
 
 Run `vagrant adbinfo`:
 
@@ -72,17 +74,14 @@ Due to an [issue](projectatomic/adb-atomic-developer-bundle#127) with the genera
 CDK certificates, this Vagrant setup disables TLS verification.
 For this reason we are unsetting _DOCKER_TLS_VERIFY_ for now.
 
-<a name="known-issues"></a>
-### Known issues
+<a name="how-to-access-the-openshift-registry"></a>
+## How to access the OpenShift registry
 
-* There are problems when using the Vagrant vbguest plugin in conjunction with the
-  vagrant-registration plugin. The vbguest plugin will try running a yum update
-  command prior the registration has taken place. To avoid this, uninstall the
-  vbguest plugin or add the following to the _Vagrantfile_: `config.vbguest.
-  auto_update = false`.
-* Causes of failure on Windows
- * Ensure `VAGRANT_DETECTED_OS=cygwin` is set
+The OpenShift registry is per default exposed as _hub.cdk.10.1.2.2.xip.io_. You can
+push to this registry directly after logging in. Assuming one logs in as user 'foo':
 
+    $ oc login 10.1.2.2:8443
+    $ docker login -u foo -p `oc whoami -t` -e foo@bar.com hub.cdk.10.1.2.2.xip.io
 
 <a name="openshift-logins"></a>
 ## OpenShift Logins
@@ -122,7 +121,28 @@ Alternatively you can set the _KUBECONFIG_ environment variable and skip the _--
     $ export KUBECONFIG=/var/lib/origin/openshift.local.config/master/admin.kubeconfig
 
 However, be careful that when you in this case login as a different user, OpenShift
-will attempt to overwrite _admin.kubeconfig_. Probably better to just define an alias.
+will attempt to overwrite _admin.kubeconfig_. Probably better to just define an
+alias.
+
+<a name="how-to-get-haproxy-statistics"></a>
+## How to get HAProxy statistics
+
+The OpenShift HAProxy is configured to expose some statistics about the routes.
+This can sometimes be helpful when debugging problem or just to monitor traffic.
+To access the statistics use [http://10.1.2.2:1936/](http://10.1.2.2:1936).
+
+The username is '_admin_' and the password gets generated during the creation
+of the router pod. You can run the following to find the password:
+
+    $ eval "$(vagrant adbinfo)"
+    $ docker ps # You want the container id of the ose-haproxy-router container
+    $ docker exec <container-id-of-router> less /var/lib/haproxy/conf/haproxy.config | grep "stats auth"
+
+<a name="known-issues"></a>
+## Known issues
+
+* Causes of failure on Windows
+ * Ensure `VAGRANT_DETECTED_OS=cygwin` is set
 
 <a name="misc"></a>
 ## Misc
