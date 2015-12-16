@@ -77,6 +77,11 @@ For this reason we are unsetting _DOCKER_TLS_VERIFY_ for now.
   command prior the registration has taken place. To avoid this, uninstall the
   vbguest plugin or add the following to the _Vagrantfile_: `config.vbguest.
   auto_update = false`.
+ * Causes of failure on Windows
+ ** Ensure putty utilities, including pscp, are installed and on the Path
+ ** Ensure cygwin is installed with rsync. The default installation does not include rsync
+ ** When running vagrant up, ensure VAGRANT_DETECTED_OS=cygwin is set
+ 
 
 <a name="openshift-logins"></a>
 ## OpenShift Logins
