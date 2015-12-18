@@ -172,6 +172,7 @@ if [ ! -f ${ORIGIN_DIR}/configured.registry ]; then
   echo "[INFO] Configuring Docker Registry"
 
   oadm registry --create --credentials=${OPENSHIFT_DIR}/openshift-registry.kubeconfig || exit 1
+  oadm policy add-scc-to-group anyuid system:authenticated || exit 1
   touch ${ORIGIN_DIR}/configured.registry
 fi
 
