@@ -11,13 +11,13 @@
   - [Regular users](#regular-users)
   - [_test-admin_](#_test-admin_)
   - [Cluster admin](#cluster-admin)
-- [How to get HAProxy statistics](#how-to-get-haproxy-statistics)
 - [Known issues](#known-issues)
 - [Misc](#misc)
+  - [How to run _any_ image on OpenShift](#how-to-run-_any_-image-on-openshift)
   - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
+  - [How to get HAProxy statistics](#how-to-get-haproxy-statistics)
   - [How to test webhooks locally](#how-to-test-webhooks-locally)
   - [How to debug EAP image](#how-to-debug-eap-image)
-  - [How to run images which use USER directive in Dockerfile](#how-to-run-images-which-use-user-directive-in-dockerfile)
   - [How to find cause of container startup failure](#how-to-find-cause-of-container-startup-failure)
   - [How to explore the OpenShift REST API](#how-to-explore-the-openshift-rest-api)
 
@@ -67,12 +67,11 @@ Run `vagrant adbinfo`:
 
 ```
 $ eval "$(vagrant adbinfo)"
-$ unset DOCKER_TLS_VERIFY
 ```
 
-Due to an [issue](projectatomic/adb-atomic-developer-bundle#127) with the generated
-CDK certificates, this Vagrant setup disables TLS verification.
-For this reason we are unsetting _DOCKER_TLS_VERIFY_ for now.
+Due to an [issue](https://github.com/projectatomic/vagrant-adbinfo/issues/55) with adbinfo, the first execution of `vagrant adbinfo` will currently kill your OpenShift
+container. You need to run `vagrant provision` to restart the VM. This only occurs
+on the first call to _adbinfo_.
 
 <a name="how-to-access-the-openshift-registry"></a>
 ## How to access the OpenShift registry
@@ -124,20 +123,6 @@ However, be careful that when you in this case login as a different user, OpenSh
 will attempt to overwrite _admin.kubeconfig_. Probably better to just define an
 alias.
 
-<a name="how-to-get-haproxy-statistics"></a>
-## How to get HAProxy statistics
-
-The OpenShift HAProxy is configured to expose some statistics about the routes.
-This can sometimes be helpful when debugging problem or just to monitor traffic.
-To access the statistics use [http://10.1.2.2:1936/](http://10.1.2.2:1936).
-
-The username is '_admin_' and the password gets generated during the creation
-of the router pod. You can run the following to find the password:
-
-    $ eval "$(vagrant adbinfo)"
-    $ docker ps # You want the container id of the ose-haproxy-router container
-    $ docker exec <container-id-of-router> less /var/lib/haproxy/conf/haproxy.config | grep "stats auth"
-
 <a name="known-issues"></a>
 ## Known issues
 
@@ -146,6 +131,32 @@ of the router pod. You can run the following to find the password:
 
 <a name="misc"></a>
 ## Misc
+
+<a name="how-to-run-_any_-image-on-openshift"></a>
+### How to run _any_ image on OpenShift
+
+Assuming a user _foo_, you can do the following to run for example
+the Node.js based blogging framework [Ghost](https://ghost.org/).
+
+    $ oc login 10.1.2.2:8443
+    Authentication required for https://10.1.2.2:8443 (openshift)
+    Username: foo
+    Password:
+    Login successful.
+
+    $ oc new-project my-ghost
+    Now using project "my-ghost" on server "https://10.1.2.2:8443".
+
+    $ docker pull ghost
+    $ docker tag ghost hub.cdk.10.1.2.2.xip.io/my-ghost/ghost
+    $ docker login -u foo -p `oc whoami -t` -e foo@bar.com hub.cdk.10.1.2.2.xip.io
+    $ docker push hub.cdk.10.1.2.2.xip.io/my-ghost/ghost
+    $ oc new-app --image-stream=ghost --name=ghost
+    $ oc expose service ghost --hostname=my-ghost-blog.10.1.2.2.xip.io
+
+Then visit http://my-ghost-blog.10.1.2.2.xip.io/ with your browser.
+
+
 
 <a name="how-to-sync-an-existing-openshift-project"></a>
 ### How to sync an existing OpenShift project
@@ -167,6 +178,20 @@ $ oc new-project foo
 $ oc create -f project-config.json
 $ oc new-build <build-config-name>
 ```
+
+<a name="how-to-get-haproxy-statistics"></a>
+### How to get HAProxy statistics
+
+The OpenShift HAProxy is configured to expose some statistics about the routes.
+This can sometimes be helpful when debugging problem or just to monitor traffic.
+To access the statistics use [http://10.1.2.2:1936/](http://10.1.2.2:1936).
+
+The username is '_admin_' and the password gets generated during the creation
+of the router pod. You can run the following to find the password:
+
+    $ eval "$(vagrant adbinfo)"
+    $ docker ps # You want the container id of the ose-haproxy-router container
+    $ docker exec <container-id-of-router> less /var/lib/haproxy/conf/haproxy.config | grep "stats auth"
 
 <a name="how-to-test-webhooks-locally"></a>
 ### How to test webhooks locally
@@ -252,21 +277,6 @@ $ oc port-forward eap-app-3-rw4ko 8787:8787
 
 Once the `oc port-forward` command is executed, you can attach a remote
 debugger to port 8787 on localhost.
-
-<a name="how-to-run-images-which-use-user-directive-in-dockerfile"></a>
-### How to run images which use USER directive in Dockerfile
-
-Out of security reasons, images run on OpenShift are not honoring the _USER_
-directive. This can lead to very misleading errors. OpenShift "enabled" images
-currently avoid the _USER_ directive, but standard Docker Hub images tend to change
-the user.
-See also [this](https://github.com/openshift/origin/issues/5693) OpenShift issue.
-To run images with _USER_ directive, run the following as cluster admin:
-
-```
-$ oc --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig edit scc restricted
-```
-Change the _runAsUser.Type_ strategy to _RunAsAny_. More info [here](https://docs.openshift.org/latest/admin_guide/manage_scc.html#enable-images-to-run-with-user-in-the-dockerfile).
 
 <a name="how-to-find-cause-of-container-startup-failure"></a>
 ### How to find cause of container startup failure
