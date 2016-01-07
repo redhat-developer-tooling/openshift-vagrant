@@ -68,12 +68,14 @@ wait_for_config_files() {
 
 ########################################################################
 # Helper function to wait for OpenShift startup
+#
+# $1 : Public IP Address
 ########################################################################
 wait_for_openshift() {
   # Give OpenShift time to start
   for i in {1..6}
   do
-    curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
+    curl -ksSf https://${1}:8443/api > /dev/null 2>&1
     if [ $? -ne 0 ]; then
       sleep 5
     else
@@ -82,7 +84,7 @@ wait_for_openshift() {
   done
 
   # Final check whether OpenShift is running
-  curl -ksSf https://10.0.2.15:8443/api > /dev/null 2>&1
+  curl -ksSf https://{$1}:8443/api > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     >&2 echo "[ERROR] OpenShift failed to start:"
     docker logs ose
@@ -161,7 +163,7 @@ fi
 # Now we start the server pointing to the prepared config files
 echo "[INFO] Starting OpenShift server"
 start_ose --master-config="${master_config}" --node-config="${node_config}" > /dev/null 2>&1
-wait_for_openshift
+wait_for_openshift $1
 
 # Make sure kubeconfig is writable
 chmod go+r ${KUBECONFIG}
