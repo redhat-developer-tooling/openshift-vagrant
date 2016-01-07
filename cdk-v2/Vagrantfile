@@ -23,6 +23,12 @@ PUBLIC_ADDRESS="10.1.2.2"
 # The public hostname for the box. Uses xip.io to have zero configuration routes
 PUBLIC_HOST="cdk.#{PUBLIC_ADDRESS}.xip.io"
 
+# The amount of memory available to the VM
+VM_MEMORY = ENV['VM_MEMORY'] || 4096
+
+# Number of VM CPUs
+VM_CPU = ENV['VM_CPU'] || 2
+
 SUBSCRIPTION_INFO = "
     Red Hat subscription credentials are needed for this VM.
     You can supply them interactively or by setting environment variables.
@@ -41,8 +47,8 @@ Vagrant.configure(2) do |config|
   	override.vm.box = "cdk_v2"
     override.vm.box_url = "#{VAGRANT_VIRTUALBOX_URL}"
     v.name = "openshift.cdk-2"
-    v.memory = ENV.has_key?('VM_MEMORY') ? "#{ENV['VM_MEMORY']}" : 1024
-    v.cpus   = 2
+    v.memory = VM_MEMORY
+    v.cpus   = VM_CPU
     v.customize ["modifyvm", :id, "--ioapic", "on"]
     v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
   end
@@ -51,8 +57,8 @@ Vagrant.configure(2) do |config|
   	override.vm.box = "cdk_v2"
     override.vm.box_url = "#{VAGRANT_LIBVIRT_URL}"
     v.driver = "kvm"
-    v.memory = 1024
-    v.cpus   = 2
+    v.memory = VM_MEMORY
+    v.cpus   = VM_CPU
   end
 
   config.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
@@ -81,7 +87,11 @@ Vagrant.configure(2) do |config|
 
   config.vm.provision "shell", inline: <<-SHELL
     echo
-    echo "You can now access OpenShift console on: https://#{PUBLIC_ADDRESS}:8443/console"
+    echo "Successfully started and provisioned VM with #{VM_CPU} cores and #{VM_MEMORY} MB of memory."
+    echo "To modify the number of cores and/or available memory set the environment variables"
+    echo "VM_CPU respectively VM_MEMORY."
+    echo
+    echo "You can now access the OpenShift console on: https://#{PUBLIC_ADDRESS}:8443/console"
     echo
     echo "To use OpenShift CLI, run:"
     echo "$ vagrant ssh"
