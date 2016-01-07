@@ -41,7 +41,7 @@ Vagrant.configure(2) do |config|
   	override.vm.box = "cdk_v2"
     override.vm.box_url = "#{VAGRANT_VIRTUALBOX_URL}"
     v.name = "openshift.cdk-2"
-    v.memory = 1024
+    v.memory = ENV.has_key?('VM_MEMORY') ? "#{ENV['VM_MEMORY']}" : 1024
     v.cpus   = 2
     v.customize ["modifyvm", :id, "--ioapic", "on"]
     v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
