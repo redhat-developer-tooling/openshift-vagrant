@@ -13,7 +13,7 @@
 
 # URLs from where to fetch the Vagrant Virtualbox images
 # FIXME: How to point to the official box image?
-VAGRANT_BOX_BASE="http://10.3.10.216/builds/11-Dec-2015"
+VAGRANT_BOX_BASE="http://10.3.10.216/builds/06-Jan-2016"
 VAGRANT_VIRTUALBOX_URL="#{VAGRANT_BOX_BASE}/rhel-7.2-server-kubernetes-vagrant-scratch-7.2-1.x86_64.vagrant-virtualbox.box"
 VAGRANT_LIBVIRT_URL="#{VAGRANT_BOX_BASE}/rhel-7.2-server-kubernetes-vagrant-scratch-7.2-1.x86_64.vagrant-libvirt.box"
 

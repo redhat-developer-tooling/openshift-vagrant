@@ -9,15 +9,18 @@ set -o pipefail
 set -o nounset
 #set -o xtrace
 
+# The name and version of the OSE image we use
+export OSE_IMAGE_NAME=openshift3/ose
+export OSE_IMAGE_VERSION=v3.1.0.4
+
+# The Docker registry from where we pull the OpenShift Enterprise Docker images
+export OPENSHIFT_IMAGE_REGISTRY="rcm-img-docker01.build.eng.bos.redhat.com:5001"
+#export OPENSHIFT_IMAGE_REGISTRY="registry.access.redhat.com"
+
+# Base locations of OpenShift config files
 export ORIGIN_DIR="/var/lib/origin"
 export OPENSHIFT_DIR=${ORIGIN_DIR}/openshift.local.config/master
 export KUBECONFIG=${OPENSHIFT_DIR}/admin.kubeconfig
-
-# The Docker registry from where we pull the OpenShift Enterprise Docker images
-export OSE_IMAGE_NAME=openshift3/ose
-export OSE_VERSION=v3.1.0.3
-export OPENSHIFT_IMAGE_REGISTRY="rcm-img-docker01.build.eng.bos.redhat.com:5001"
-#export OPENSHIFT_IMAGE_REGISTRY="registry.access.redhat.com"
 
 ########################################################################
 # Helper function to start OpenShift as container
@@ -33,7 +36,7 @@ start_ose() {
      	-v ${ORIGIN_DIR}/openshift.local.volumes:${ORIGIN_DIR}/openshift.local.volumes:z \
      	-v ${ORIGIN_DIR}/openshift.local.config:${ORIGIN_DIR}/openshift.local.config:z \
      	-v ${ORIGIN_DIR}/openshift.local.etcd:${ORIGIN_DIR}/openshift.local.etcd:z \
-     openshift3/ose start "$@"
+     ${OSE_IMAGE_NAME}:${OSE_IMAGE_VERSION} start "$@"
 }
 
 ########################################################################
@@ -105,10 +108,7 @@ cache_image() {
 ########################################################################
 # Pre-pull some images in order to speed up the OpenShift out of the box experience
 # See also https://github.com/projectatomic/adb-atomic-developer-bundle/issues/160
-cache_image openshift3/ose-pod:${OSE_VERSION}
-cache_image openshift3/ose-haproxy-router:${OSE_VERSION}
-cache_image openshift3/ose-docker-registry:${OSE_VERSION}
-cache_image openshift3/ose-sti-builder:${OSE_VERSION}
+cache_image openshift3/ose-sti-builder:${OSE_IMAGE_VERSION}
 
 # Copy OpenShift CLI tools to the VM
 binaries=(oc oadm)
@@ -116,7 +116,7 @@ for n in ${binaries[@]}; do
 	[ -f /usr/bin/${n} ] && continue
 	echo "[INFO] Copying the OpenShift '${n}' binary to host /usr/bin/${n}"
 
-	docker run --rm --entrypoint=/bin/cat openshift3/ose /usr/bin/${n} > /usr/bin/${n}
+	docker run --rm --entrypoint=/bin/cat ${OSE_IMAGE_NAME}:${OSE_IMAGE_VERSION} /usr/bin/${n} > /usr/bin/${n}
 	chmod +x /usr/bin/${n}
 done
 echo "export OPENSHIFT_DIR=#{ORIGIN_DIR}/openshift.local.config/master" > /etc/profile.d/openshift.sh
