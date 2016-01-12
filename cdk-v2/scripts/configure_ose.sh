@@ -207,7 +207,7 @@ if [ ! -f ${ORIGIN_DIR}/configured.templates ]; then
   # - openshift/origin
   # - openshift/nodejs-ex
   # - jboss-openshift/application-templates
-  ose_tag=ose-v1.1.0
+  ose_tag=ose-v1.2.0-1
   template_list=(
     # Image streams
     https://raw.githubusercontent.com/openshift/origin/master/examples/image-streams/image-streams-rhel7.json
