@@ -41,7 +41,7 @@ virtual machine:
 * [Vagrant](https://www.vagrantup.com/) installed
 * [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) _(>=1.0.0)_ installed
  * Run `vagrant plugin install vagrant-registration` to install plugin
-* [vagrant-adbinfo plugin](https://github.com/bexelbie/vagrant-adbinfo) _(>=0.0.9)_ installed
+* [vagrant-adbinfo plugin](https://github.com/projectatomic/vagrant-adbinfo) _(>=0.0.9)_ installed
  * Run `vagrant plugin install vagrant-adbinfo` to install plugin
 * On Windows:
  * Ensure [PuTTY](http://www.putty.org/) utilities, including pscp, are installed and on the _Path_. See also vagrant-adbinfo issue [#20](https://github.com/projectatomic/vagrant-adbinfo/issues/20)
