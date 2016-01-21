@@ -1,4 +1,4 @@
-# -*- mode: ruby -*-
+  # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
 # Usage:
@@ -43,68 +43,69 @@ NO_VAGRANT_REGISTRATION_ERROR = "vagrant-registration plugin is not installed, r
 
 Vagrant.configure(2) do |config|
 
-  config.vm.provider "virtualbox" do |v, override|
-  	override.vm.box = "cdk_v2"
-    override.vm.box_url = "#{VAGRANT_VIRTUALBOX_URL}"
-    v.name = "openshift.cdk-2"
-    v.memory = VM_MEMORY
-    v.cpus   = VM_CPU
-    v.customize ["modifyvm", :id, "--ioapic", "on"]
-    v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
-  end
+  config.vm.define "cdk" do |cdk|
+      cdk.vm.provider "virtualbox" do |v, override|
+      	override.vm.box = "cdk_v2"
+        override.vm.box_url = "#{VAGRANT_VIRTUALBOX_URL}"
+        v.name = "openshift.cdk-2"
+        v.memory = VM_MEMORY
+        v.cpus   = VM_CPU
+        v.customize ["modifyvm", :id, "--ioapic", "on"]
+        v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      end
 
-  config.vm.provider "libvirt" do |v, override|
-  	override.vm.box = "cdk_v2"
-    override.vm.box_url = "#{VAGRANT_LIBVIRT_URL}"
-    v.driver = "kvm"
-    v.memory = VM_MEMORY
-    v.cpus   = VM_CPU
-  end
+      cdk.vm.provider "libvirt" do |v, override|
+      	override.vm.box = "cdk_v2"
+        override.vm.box_url = "#{VAGRANT_LIBVIRT_URL}"
+        v.driver = "kvm"
+        v.memory = VM_MEMORY
+        v.cpus   = VM_CPU
+      end
 
-  config.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
+      cdk.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
 
-  unless Vagrant.has_plugin?("vagrant-adbinfo")
-    raise Vagrant::Errors::VagrantError.new, NO_ADBINFO_ERROR
-  end
+      unless Vagrant.has_plugin?("vagrant-adbinfo")
+        raise Vagrant::Errors::VagrantError.new, NO_ADBINFO_ERROR
+      end
 
-  unless Vagrant.has_plugin?('vagrant-registration')
-    raise Vagrant::Errors::VagrantError.new, NO_VAGRANT_REGISTRATION_ERROR
-  end
+      unless Vagrant.has_plugin?('vagrant-registration')
+        raise Vagrant::Errors::VagrantError.new, NO_VAGRANT_REGISTRATION_ERROR
+      end
 
-  config.registration.username    = ENV.has_key?('SUB_USERNAME') ? "#{ENV['SUB_USERNAME']}" : nil
-  config.registration.password    = ENV.has_key?('SUB_PASSWORD') ? "#{ENV['SUB_PASSWORD']}" : nil
-  config.registration.auto_attach = true
+      cdk.registration.username    = ENV.has_key?('SUB_USERNAME') ? "#{ENV['SUB_USERNAME']}" : nil
+      cdk.registration.password    = ENV.has_key?('SUB_PASSWORD') ? "#{ENV['SUB_PASSWORD']}" : nil
+      cdk.registration.auto_attach = true
 
-  case ARGV[0]
-  when "up", "halt"
-    if config.registration.username.nil? || config.registration.password.nil?
-      puts SUBSCRIPTION_INFO
+      case ARGV[0]
+      when "up", "halt"
+        if cdk.registration.username.nil? || cdk.registration.password.nil?
+          puts SUBSCRIPTION_INFO
+        end
+      end
+
+      cdk.vm.provision :shell, :path => "./scripts/configure_docker.sh", :args => "#{PUBLIC_HOST}"
+      cdk.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{PUBLIC_ADDRESS} #{PUBLIC_HOST}"
+
+      cdk.vm.provision "shell", inline: <<-SHELL
+        echo
+        echo "Successfully started and provisioned VM with #{VM_CPU} cores and #{VM_MEMORY} MB of memory."
+        echo "To modify the number of cores and/or available memory set the environment variables"
+        echo "VM_CPU respectively VM_MEMORY."
+        echo
+        echo "You can now access the OpenShift console on: https://#{PUBLIC_ADDRESS}:8443/console"
+        echo
+        echo "To use OpenShift CLI, run:"
+        echo "$ vagrant ssh"
+        echo "$ oc login #{PUBLIC_ADDRESS}:8443"
+        echo "$ oc status"
+        echo
+        echo "To become a cluster-admin, add '--config' to oc commands:"
+        echo "$ vagrant ssh"
+        echo "$ oc status --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig"
+        echo
+        echo "If you have the oc client library on your host, you can also login from your host."
+        echo
+      SHELL
     end
-  end
-
-  config.vm.provision :shell, :path => "./scripts/configure_docker.sh", :args => "#{PUBLIC_HOST}"
-  config.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{PUBLIC_ADDRESS} #{PUBLIC_HOST}"
-
-  config.vm.provision "shell", inline: <<-SHELL
-    echo
-    echo "Successfully started and provisioned VM with #{VM_CPU} cores and #{VM_MEMORY} MB of memory."
-    echo "To modify the number of cores and/or available memory set the environment variables"
-    echo "VM_CPU respectively VM_MEMORY."
-    echo
-    echo "You can now access the OpenShift console on: https://#{PUBLIC_ADDRESS}:8443/console"
-    echo
-    echo "To use OpenShift CLI, run:"
-    echo "$ vagrant ssh"
-    echo "$ oc login #{PUBLIC_ADDRESS}:8443"
-    echo "$ oc status"
-    echo
-    echo "To become a cluster-admin, add '--config' to oc commands:"
-    echo "$ vagrant ssh"
-    echo "$ oc status --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig"
-    echo
-    echo "If you have the oc client library on your host, you can also login from your host."
-    echo
-  SHELL
-
 end
 
