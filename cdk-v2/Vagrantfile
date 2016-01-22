@@ -13,9 +13,9 @@
 
 # URLs from where to fetch the Vagrant Virtualbox images
 # FIXME: How to point to the official box image?
-VAGRANT_BOX_BASE="http://cdk-builds.usersys.redhat.com/builds/08-Jan-2016"
-VAGRANT_VIRTUALBOX_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-8.x86_64.vagrant-virtualbox.box"
-VAGRANT_LIBVIRT_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-8.x86_64.vagrant-libvirt.box"
+VAGRANT_BOX_BASE="http://cdk-builds.usersys.redhat.com/builds/21-Jan-2016"
+VAGRANT_VIRTUALBOX_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-10.x86_64.vagrant-virtualbox.box"
+VAGRANT_LIBVIRT_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-10.x86_64.vagrant-libvirt.box"
 
 # The public IP address of the VM
 PUBLIC_ADDRESS="10.1.2.2"
