@@ -6,6 +6,10 @@ describe port(8443) do
   it { should be_listening }
 end
 
+describe command('curl -k https://10.1.2.2:8443/console/') do
+  its(:stdout) { should contain /OpenShift Web Console/ }
+end
+
 describe command('oc --insecure-skip-tls-verify login 10.1.2.2:8443 -u foo -p bar') do
   its(:stdout) { should contain /Login successful./ }
 end
