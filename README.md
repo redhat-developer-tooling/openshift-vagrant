@@ -43,6 +43,7 @@ virtual machine:
  * Run `vagrant plugin install vagrant-registration` to install plugin
 * [vagrant-adbinfo plugin](https://github.com/projectatomic/vagrant-adbinfo) _(>=0.0.9)_ installed
  * Run `vagrant plugin install vagrant-adbinfo` to install plugin
+* Optionally, the [OpenShift CLI](https://access.redhat.com/downloads/content/290) to run `oc` commands from the terminal. More info about the installation is available in the  [OpenShift documentation](https://docs.openshift.com/enterprise/3.0/cli_reference/get_started_cli.html#installing-the-cli).
 * On Windows:
  * Ensure [PuTTY](http://www.putty.org/) utilities, including pscp, are installed and on the _Path_. See also vagrant-adbinfo issue [#20](https://github.com/projectatomic/vagrant-adbinfo/issues/20)
  * Ensure [Cygwin](https://www.cygwin.com/) is installed with rsync AND openssh. The default installation does not include these packages.
