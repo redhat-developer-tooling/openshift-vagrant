@@ -43,7 +43,7 @@ virtual machine:
  * Run `vagrant plugin install vagrant-registration` to install plugin
 * [vagrant-adbinfo plugin](https://github.com/projectatomic/vagrant-adbinfo) _(>=0.0.9)_ installed
  * Run `vagrant plugin install vagrant-adbinfo` to install plugin
-* Optionally, the [OpenShift CLI](https://access.redhat.com/downloads/content/290) to run `oc` commands from the terminal. More info about the installation is available in the  [OpenShift documentation](https://docs.openshift.com/enterprise/3.0/cli_reference/get_started_cli.html#installing-the-cli).
+* Optionally, the [OpenShift Client tools](https://github.com/openshift/origin/releases/) for your OS to run the `oc` commands from the terminal.
 * On Windows:
  * Ensure [PuTTY](http://www.putty.org/) utilities, including pscp, are installed and on the _Path_. See also vagrant-adbinfo issue [#20](https://github.com/projectatomic/vagrant-adbinfo/issues/20)
  * Ensure [Cygwin](https://www.cygwin.com/) is installed with rsync AND openssh. The default installation does not include these packages.
@@ -307,7 +307,3 @@ $ docker logs 5b37abf17fb6
 Try this:
 * Open [this](http://openshift3swagger-claytondev.rhcloud.com) link in a browser
 * Paste the URL of the OpenShift instance "https://10.1.2.2:8443/swaggerapi/oapi/v1" into the input field
-
-
-
-
