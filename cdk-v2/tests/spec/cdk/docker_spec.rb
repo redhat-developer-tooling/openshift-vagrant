@@ -7,11 +7,15 @@ describe service('docker') do
   it { should be_enabled }
 end
 
+describe service('docker') do
+  it { should be_running }
+end
+
 describe file('/etc/sysconfig/docker') do
   it { should contain 'registry.access.redhat.com' }
 end
 
-describe docker_container('ose') do
+describe docker_container('openshift') do
   it { should be_running }
 end
 

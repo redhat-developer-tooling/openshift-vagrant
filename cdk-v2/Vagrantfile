@@ -3,25 +3,25 @@
 
 # Usage:
 #
-# To use this Vagrantfile, you(optional):
-# * Connected to internal Red Hat network if you need to any package update
-# * Have 'vagrant-registration' plugin installed
+# To use this Vagrantfile:
 # * Have valid RH employee subscription account
-# * Have 'vagrant-adbinfo' plugin installed
+# * Be connected to the internal Red Hat network
+# * Have the 'vagrant-registration' plugin installed
+# * Have the 'vagrant-service-manager' plugin installed
 
 # General configuration:
 
 # URLs from where to fetch the Vagrant Virtualbox images
 # FIXME: How to point to the official box image?
-VAGRANT_BOX_BASE="http://cdk-builds.usersys.redhat.com/builds/25-Jan-2016"
-VAGRANT_VIRTUALBOX_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-13.x86_64.vagrant-virtualbox.box"
-VAGRANT_LIBVIRT_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-13.x86_64.vagrant-libvirt.box"
+VAGRANT_BOX_BASE="http://cdk-builds.usersys.redhat.com/builds/10-Feb-2016"
+VAGRANT_VIRTUALBOX_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-14.x86_64.vagrant-virtualbox.box"
+VAGRANT_LIBVIRT_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-14.x86_64.vagrant-libvirt.box"
 
-# The public IP address of the VM
+# The IP address and hostname of the VM as exposed on the host.
+# Uses xip.io for now to have zero configuration routes
 PUBLIC_ADDRESS="10.1.2.2"
-
-# The public hostname for the box. Uses xip.io to have zero configuration routes
 PUBLIC_HOST="cdk.#{PUBLIC_ADDRESS}.xip.io"
+REGISTRY_HOST="hub.#{PUBLIC_HOST}"
 
 # The amount of memory available to the VM
 VM_MEMORY = ENV['VM_MEMORY'] || 4096
@@ -38,7 +38,7 @@ SUBSCRIPTION_INFO = "
     $ export SUB_PASSWORD=password
   "
 
-NO_ADBINFO_ERROR = "vagrant-adbinfo plugin is not installed, run `vagrant plugin install vagrant-adbinfo` to install the plugin."
+NO_ADBINFO_ERROR = "vagrant-service-manager plugin is not installed, run `vagrant plugin install vagrant-service-manager` to install the plugin."
 NO_VAGRANT_REGISTRATION_ERROR = "vagrant-registration plugin is not installed, run `vagrant plugin install vagrant-registration` to install the plugin."
 
 Vagrant.configure(2) do |config|
@@ -65,7 +65,7 @@ Vagrant.configure(2) do |config|
       cdk.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
 
       unless Vagrant.has_plugin?("vagrant-adbinfo")
-        raise Vagrant::Errors::VagrantError.new, NO_ADBINFO_ERROR
+        raise Vagrant::Errors::VagrantError.new, NO_SERVICE_MANAGER_ERROR
       end
 
       unless Vagrant.has_plugin?('vagrant-registration')
@@ -83,8 +83,20 @@ Vagrant.configure(2) do |config|
         end
       end
 
-      cdk.vm.provision :shell, :path => "./scripts/configure_docker.sh", :args => "#{PUBLIC_HOST}"
-      cdk.vm.provision :shell, :path => "./scripts/configure_ose.sh", :args => "#{PUBLIC_ADDRESS} #{PUBLIC_HOST}"
+      cdk.vm.provision :shell, inline: <<-SHELL
+        if ! grep -q "#{REGISTRY_HOST}" /etc/sysconfig/docker; then
+          sed -i.orig -e "s/INSECURE_REGISTRY=.*/INSECURE_REGISTRY='--insecure-registry 172.30.0.0\\/16 --insecure-registry #{PUBLIC_ADDRESS} --insecure-registry #{REGISTRY_HOST}'/" /etc/sysconfig/docker
+        fi
+
+        if ! grep -q "#{PUBLIC_HOST}" /etc/sysconfig/openshift_option; then
+          sed -i.orig -e "s/OPTIONS=.*/OPTIONS='-host #{PUBLIC_HOST} -ip #{PUBLIC_ADDRESS}'/" /etc/sysconfig/openshift_option
+        fi
+
+        if ! systemctl -q is-enabled openshift; then
+          sudo systemctl enable openshift
+          sudo systemctl start openshift
+        fi
+      SHELL
 
       cdk.vm.provision "shell", inline: <<-SHELL
         echo
@@ -97,11 +109,10 @@ Vagrant.configure(2) do |config|
         echo "To use OpenShift CLI, run:"
         echo "$ vagrant ssh"
         echo "$ oc login #{PUBLIC_ADDRESS}:8443"
-        echo "$ oc status"
         echo
-        echo "To become a cluster-admin, add '--config' to oc commands:"
-        echo "$ vagrant ssh"
-        echo "$ oc status --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig"
+        echo "Configured users are (<username>/<password>):"
+        echo "openshift-dev/devel"
+        echo "admin/admin"
         echo
         echo "If you have the oc client library on your host, you can also login from your host."
         echo
