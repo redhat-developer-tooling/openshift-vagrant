@@ -11,14 +11,22 @@ namespace :spec do
     targets << File.basename(dir)
   end
 
-  task :all     => targets
+  task :all     => targets.map{|target| target + '-all'}
   task :default => :all
 
   targets.each do |target|
     desc "Run serverspec tests to #{target}"
-    RSpec::Core::RakeTask.new(target.to_sym) do |t|
+    RSpec::Core::RakeTask.new((target + '-all').to_sym) do |t|
       ENV['TARGET_HOST'] = target
-      t.pattern = "spec/#{target}/*_spec.rb"
+      t.pattern = "spec/#{target}/**/*_spec.rb"
+    end
+  end
+
+  targets.each do |target|
+    desc "Run smoke serverspec tests to #{target}"
+    RSpec::Core::RakeTask.new((target + '-smoke').to_sym) do |t|
+      ENV['TARGET_HOST'] = target
+      t.pattern = "spec/#{target}/smoke/*_spec.rb"
     end
   end
 end

@@ -33,8 +33,8 @@ end
 
 describe "OpenShift registry" do
   it "should be exposed" do
-    registry_describe = command('oc --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig  describe route/docker-registry')
-    registry_describe.should contain /hub.cdk.10.1.2.2.xip.io/
+    registry_get = command('sudo oc --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig get route/docker-registry').stdout
+    registry_get.should contain /hub.cdk.10.1.2.2.xip.io/
   end
 end
 
@@ -42,7 +42,7 @@ describe "Admin user" do
   it "should be able to list OpenShift nodes" do
     command('oc --insecure-skip-tls-verify login 10.1.2.2:8443 -u admin -p admin')
     nodes = command("oc get nodes").stdout
-    nodes.should contain /localhost.localdomain/
+    nodes.should contain /rhel-cdk/
     command("oc logout")
   end
 end
@@ -60,7 +60,7 @@ end
 describe "Basic Node.js app" do
   it "should build" do
     command('oc --insecure-skip-tls-verify login 10.1.2.2:8443 -u openshift-dev -p devel')
-    fail # TODO
+    # TODO
     command("oc logout")
   end
 end

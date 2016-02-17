@@ -21,7 +21,8 @@ the Vagrant OpenShift setup works and to document the expected behavior
 <a name="running-tests"></a>
 ## Running tests
 
-* Run tests - `bundle exec rake` or `bundle exec rake spec:cdk`
+* Run tests - `bundle exec rake` or `bundle exec rake spec:cdk-all`
+* run somke tests only - `bundle exec rake spec:cdk-smoke`
 * To view available rake tasks - `bundle exec rake -T`
 
 <a name="tips"></a>

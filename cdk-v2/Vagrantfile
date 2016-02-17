@@ -11,11 +11,10 @@
 
 # General configuration:
 
-# URLs from where to fetch the Vagrant Virtualbox images
+# URLs from where to fetch the Vagrant VirtualBox images
 # FIXME: How to point to the official box image?
-VAGRANT_BOX_BASE="http://cdk-builds.usersys.redhat.com/builds/10-Feb-2016"
-VAGRANT_VIRTUALBOX_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-14.x86_64.vagrant-virtualbox.box"
-VAGRANT_LIBVIRT_URL="#{VAGRANT_BOX_BASE}/rhel-cdk-kubernetes-7.2-14.x86_64.vagrant-libvirt.box"
+VAGRANT_VIRTUALBOX_URL='http://cdk-builds.usersys.redhat.com/builds/19-Feb-2016/rhel-cdk-kubernetes-7.2-15.x86_64.vagrant-virtualbox.box'
+VAGRANT_LIBVIRT_URL='http://cdk-builds.usersys.redhat.com/builds/19-Feb-2016/rhel-cdk-kubernetes-7.2-15.x86_64.vagrant-libvirt.box'
 
 # The IP address and hostname of the VM as exposed on the host.
 # Uses xip.io for now to have zero configuration routes
@@ -84,6 +83,15 @@ Vagrant.configure(2) do |config|
       end
 
       cdk.vm.provision :shell, inline: <<-SHELL
+        # https://github.com/projectatomic/adb-utils/issues/29
+        # HACK - Enabling and starting OpenShift should not be needed here,
+        # but we are working around
+        if ! systemctl -q is-enabled openshift; then
+          systemctl enable openshift
+          systemctl start openshift
+          systemctl stop openshift
+        fi
+
         if ! grep -q "#{REGISTRY_HOST}" /etc/sysconfig/docker; then
           sed -i.orig -e "s/INSECURE_REGISTRY=.*/INSECURE_REGISTRY='--insecure-registry 172.30.0.0\\/16 --insecure-registry #{PUBLIC_ADDRESS} --insecure-registry #{REGISTRY_HOST}'/" /etc/sysconfig/docker
         fi
@@ -92,10 +100,17 @@ Vagrant.configure(2) do |config|
           sed -i.orig -e "s/OPTIONS=.*/OPTIONS='-host #{PUBLIC_HOST} -ip #{PUBLIC_ADDRESS}'/" /etc/sysconfig/openshift_option
         fi
 
-        if ! systemctl -q is-enabled openshift; then
-          sudo systemctl enable openshift
-          sudo systemctl start openshift
-        fi
+        # HACK - see above
+        systemctl start openshift
+
+        export KUBECONFIG=/var/lib/origin/openshift.local.config/master/admin.kubeconfig
+        # https://github.com/projectatomic/adb-utils/issues/31
+        oc delete route/docker-registry
+        oc expose service docker-registry --hostname #{REGISTRY_HOST}
+
+        # https://github.com/projectatomic/adb-utils/issues/32
+        oadm policy add-cluster-role-to-user cluster-admin admin
+
       SHELL
 
       cdk.vm.provision "shell", inline: <<-SHELL
