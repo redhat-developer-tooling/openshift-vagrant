@@ -39,13 +39,12 @@ virtual machine:
 * __Active VPN connection during the creation and provisioning of the VM__
 * [VirtualBox](https://www.virtualbox.org/) installed
 * [Vagrant](https://www.vagrantup.com/) installed
-* [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) _(>=1.0.0)_ installed
+* [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) _(>=1.2.1)_ installed
  * Run `vagrant plugin install vagrant-registration` to install plugin
-* [vagrant-adbinfo plugin](https://github.com/projectatomic/vagrant-adbinfo) _(>=0.0.9)_ installed
+* [vagrant-service-manager plugin](https://github.com/projectatomic/vagrant-service-manager) _(>=0.0.2)_ installed
  * Run `vagrant plugin install vagrant-adbinfo` to install plugin
 * Optionally, the [OpenShift Client tools](https://github.com/openshift/origin/releases/) for your OS to run the `oc` commands from the terminal.
 * On Windows:
- * Ensure [PuTTY](http://www.putty.org/) utilities, including pscp, are installed and on the _Path_. See also vagrant-adbinfo issue [#20](https://github.com/projectatomic/vagrant-adbinfo/issues/20)
  * Ensure [Cygwin](https://www.cygwin.com/) is installed with rsync AND openssh. The default installation does not include these packages.
 
 <a name="how-to-run-it"></a>
