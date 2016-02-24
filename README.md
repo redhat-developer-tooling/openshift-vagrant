@@ -9,7 +9,7 @@
 - [How to access the OpenShift registry](#how-to-access-the-openshift-registry)
 - [OpenShift Logins](#openshift-logins)
   - [Regular users](#regular-users)
-  - [_test-admin_](#_test-admin_)
+  - [admin](#admin)
   - [Cluster admin](#cluster-admin)
 - [Known issues](#known-issues)
 - [Misc](#misc)
@@ -90,26 +90,20 @@ Once up an running the OpenShift console is accessible under https://10.1.2.2:84
 <a name="regular-users"></a>
 ### Regular users
 
-The OpenShift instance setup with no authentication, so you can choose any username
-you like. If the username does not exist a user is create. The password can be
-arbitrary (on each login).
+The OpenShift instance setup with simple authentication. There is a _openshift-dev_
+user with password _devel_ which can be used for creating projects and applications.
 
-<a name="_test-admin_"></a>
-### _test-admin_
+<a name="admin"></a>
+### admin
 
-There is one user - _test-admin_ which is pre-configured. This user has _view_
-permissions for the _default_ namespace. This can be handy, since in this namespace
-the docker-registry and the router are running.
-
-This user has no permissions to change anything in the default namespace!
+There is also an _admin_ user who is member of the _cluster-admin_ group which
+has permissions to do everything on any project.
 
 <a name="cluster-admin"></a>
 ### Cluster admin
 
-To make any administrative changes to the system, one has to cluster admin and
-run the appropriate _oc_/_oadm_ commands.
-To do so log onto the vagrant vm and use the command line tools with the _--config_
-option referencing the system configuration.
+To make any administrative changes to the system, you can also login to the VM (`vagrant ssh`) and use the command line tools with the _--config_
+option referencing the _system:admin_ configuration.
 
     $ vagrant ssh
     $ oadm --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig <whatever oadm command>
