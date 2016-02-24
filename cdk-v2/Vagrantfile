@@ -37,7 +37,7 @@ SUBSCRIPTION_INFO = "
     $ export SUB_PASSWORD=password
   "
 
-NO_ADBINFO_ERROR = "vagrant-service-manager plugin is not installed, run `vagrant plugin install vagrant-service-manager` to install the plugin."
+NO_SERVICE_MANAGER_ERROR = "vagrant-service-manager plugin is not installed, run `vagrant plugin install vagrant-service-manager` to install the plugin."
 NO_VAGRANT_REGISTRATION_ERROR = "vagrant-registration plugin is not installed, run `vagrant plugin install vagrant-registration` to install the plugin."
 
 Vagrant.configure(2) do |config|
@@ -63,7 +63,7 @@ Vagrant.configure(2) do |config|
 
       cdk.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
 
-      unless Vagrant.has_plugin?("vagrant-adbinfo")
+      unless Vagrant.has_plugin?("vagrant-service-manager")
         raise Vagrant::Errors::VagrantError.new, NO_SERVICE_MANAGER_ERROR
       end
 
