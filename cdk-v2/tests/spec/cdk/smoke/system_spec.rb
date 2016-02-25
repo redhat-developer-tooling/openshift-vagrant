@@ -18,7 +18,7 @@ end
 
 describe interface('eth1') do
   let(:disable_sudo) { false }
-  it { should have_ipv4_address("10.1.2.2") }
+  it { should have_ipv4_address("#{ENV['TARGET_IP']}") }
 end
 
 describe interface('docker0') do

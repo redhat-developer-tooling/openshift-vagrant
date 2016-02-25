@@ -21,9 +21,12 @@ the Vagrant OpenShift setup works and to document the expected behavior
 <a name="running-tests"></a>
 ## Running tests
 
-* Run tests - `bundle exec rake` or `bundle exec rake spec:cdk-all`
-* run somke tests only - `bundle exec rake spec:cdk-smoke`
-* To view available rake tasks - `bundle exec rake -T`
+* `bundle exec rake -T` - view available rake tasks
+* `bundle exec rake` - run all tests
+* `bundle exec rake spec:cdk-all` - explicitly run all tests
+* `bundle exec rake spec:cdk-smoke` - run smoke tests only
+* `rake spec:cdk-smoke[10.10.10.2]` (or whatever the IP us you selected
+  in the _Vagrantfile_) - run tests against a different IP
 
 <a name="tips"></a>
 ## Tips

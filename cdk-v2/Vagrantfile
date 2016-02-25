@@ -18,7 +18,7 @@ VAGRANT_LIBVIRT_URL='http://cdk-builds.usersys.redhat.com/builds/19-Feb-2016/rhe
 
 # The IP address and hostname of the VM as exposed on the host.
 # Uses xip.io for now to have zero configuration routes
-PUBLIC_ADDRESS="10.1.2.2"
+PUBLIC_ADDRESS="10.1.1.2"
 PUBLIC_HOST="cdk.#{PUBLIC_ADDRESS}.xip.io"
 REGISTRY_HOST="hub.#{PUBLIC_HOST}"
 
@@ -71,9 +71,10 @@ Vagrant.configure(2) do |config|
         raise Vagrant::Errors::VagrantError.new, NO_VAGRANT_REGISTRATION_ERROR
       end
 
-      cdk.registration.username    = ENV.has_key?('SUB_USERNAME') ? "#{ENV['SUB_USERNAME']}" : nil
-      cdk.registration.password    = ENV.has_key?('SUB_PASSWORD') ? "#{ENV['SUB_PASSWORD']}" : nil
-      cdk.registration.auto_attach = true
+      if ENV.has_key?('SUB_USERNAME') && ENV.has_key?('SUB_PASSWORD')
+        cdk.registration.username = ENV['SUB_USERNAME']
+        cdk.registration.password = ENV['SUB_PASSWORD']
+      end
 
       case ARGV[0]
       when "up", "halt"
