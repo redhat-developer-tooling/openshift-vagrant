@@ -22,7 +22,7 @@ namespace :spec do
 
       ip = args[:ip]
       if ip.nil?
-        ip = '10.1.2.2.'
+        ip = '10.1.2.2'
       end
       ENV['TARGET_IP'] = ip
       puts "Target Host: #{ENV['TARGET_HOST']}"
@@ -38,7 +38,7 @@ namespace :spec do
 
       ip = args[:ip]
       if ip.nil?
-        ip = '10.1.2.2.'
+        ip = '10.1.2.2'
       end
       ENV['TARGET_IP'] = ip
       puts "Target Host: #{ENV['TARGET_HOST']}"

@@ -18,7 +18,7 @@ VAGRANT_LIBVIRT_URL='http://cdk-builds.usersys.redhat.com/builds/19-Feb-2016/rhe
 
 # The IP address and hostname of the VM as exposed on the host.
 # Uses xip.io for now to have zero configuration routes
-PUBLIC_ADDRESS="10.1.1.2"
+PUBLIC_ADDRESS="10.1.2.2"
 PUBLIC_HOST="cdk.#{PUBLIC_ADDRESS}.xip.io"
 REGISTRY_HOST="hub.#{PUBLIC_HOST}"
 
