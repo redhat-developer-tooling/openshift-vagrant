@@ -1,3 +1,3 @@
 openshift.auth.scheme=Basic
-openshift.auth.username=test-admin
+openshift.auth.username=openshift-dev
 cdk.version=2.0
