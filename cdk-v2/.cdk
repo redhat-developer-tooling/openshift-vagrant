@@ -1,3 +1,4 @@
 openshift.auth.scheme=Basic
 openshift.auth.username=openshift-dev
+openshift.auth.password=devel
 cdk.version=2.0
