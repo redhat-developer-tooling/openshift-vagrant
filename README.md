@@ -42,7 +42,7 @@ virtual machine:
 * [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) _(>=1.2.1)_ installed
  * Run `vagrant plugin install vagrant-registration` to install plugin
 * [vagrant-service-manager plugin](https://github.com/projectatomic/vagrant-service-manager) _(>=0.0.2)_ installed
- * Run `vagrant plugin install vagrant-adbinfo` to install plugin
+ * Run `vagrant plugin install vagrant-service-manager` to install plugin
 * Optionally, the [OpenShift Client tools](https://github.com/openshift/origin/releases/) for your OS to run the `oc` commands from the terminal.
 * On Windows:
  * Ensure [Cygwin](https://www.cygwin.com/) is installed with rsync AND openssh. The default installation does not include these packages.
