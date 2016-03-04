@@ -76,11 +76,11 @@ on the first call to _adbinfo_.
 <a name="how-to-access-the-openshift-registry"></a>
 ## How to access the OpenShift registry
 
-The OpenShift registry is per default exposed as _hub.cdk.10.1.2.2.xip.io_. You can
+The OpenShift registry is per default exposed as _hub.openshift.10.1.2.2.xip.io_. You can
 push to this registry directly after logging in. Assuming one logs in as user 'foo':
 
     $ oc login 10.1.2.2:8443
-    $ docker login -u foo -p `oc whoami -t` -e foo@bar.com hub.cdk.10.1.2.2.xip.io
+    $ docker login -u foo -p `oc whoami -t` -e foo@bar.com hub.openshift.10.1.2.2.xip.io
 
 <a name="openshift-logins"></a>
 ## OpenShift Logins
@@ -142,9 +142,9 @@ the Node.js based blogging framework [Ghost](https://ghost.org/).
     Now using project "my-ghost" on server "https://10.1.2.2:8443".
 
     $ docker pull ghost
-    $ docker tag ghost hub.cdk.10.1.2.2.xip.io/my-ghost/ghost
-    $ docker login -u foo -p `oc whoami -t` -e foo@bar.com hub.cdk.10.1.2.2.xip.io
-    $ docker push hub.cdk.10.1.2.2.xip.io/my-ghost/ghost
+    $ docker tag ghost hub.openshift.10.1.2.2.xip.io/my-ghost/ghost
+    $ docker login -u foo -p `oc whoami -t` -e foo@bar.com hub.openshift.10.1.2.2.xip.io
+    $ docker push hub.openshift.10.1.2.2.xip.io/my-ghost/ghost
     $ oc new-app --image-stream=ghost --name=ghost
     $ oc expose service ghost --hostname=my-ghost-blog.10.1.2.2.xip.io
 

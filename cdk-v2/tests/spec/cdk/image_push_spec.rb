@@ -23,11 +23,11 @@ describe "Pushing arbitrary docker image" do
     # 1 - Tag the image against the exposed OpenShift registry using the created project name as target
     # 2 - Log into the Docker registry
     # 3 - Push the image
-    exit = command("docker tag ghost hub.cdk.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").exit_status
+    exit = command("docker tag ghost hub.openshift.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").exit_status
     exit.should be 0
-    exit = command("docker login -u openshift-dev -p '#{token}' -e foo@bar.com hub.cdk.#{ENV['TARGET_IP']}.xip.io").exit_status
+    exit = command("docker login -u openshift-dev -p '#{token}' -e foo@bar.com hub.openshift.#{ENV['TARGET_IP']}.xip.io").exit_status
     exit.should be 0
-    exit = command("docker push hub.cdk.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").exit_status
+    exit = command("docker push hub.openshift.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").exit_status
     exit.should be 0
 
     # 1 - Create the app from the image stream created by pusing the image
@@ -49,7 +49,7 @@ describe "Pushing arbitrary docker image" do
 
   after do
     puts 'Cleaning up'
-    out = command("docker rmi hub.cdk.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").stdout
+    out = command("docker rmi hub.openshift.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").stdout
     puts "#{out}"
     out = command('oc delete all --all').stdout
     puts "#{out}"

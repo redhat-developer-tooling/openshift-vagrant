@@ -7,12 +7,12 @@ GEM
       net-ssh (>= 2.6.5)
     net-ssh (3.0.2)
     net-telnet (0.1.1)
-    rake (10.4.2)
+    rake (10.5.0)
     rspec (3.4.0)
       rspec-core (~> 3.4.0)
       rspec-expectations (~> 3.4.0)
       rspec-mocks (~> 3.4.0)
-    rspec-core (3.4.1)
+    rspec-core (3.4.3)
       rspec-support (~> 3.4.0)
     rspec-expectations (3.4.0)
       diff-lcs (>= 1.2.0, < 2.0)
@@ -24,13 +24,13 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.4.0)
     rspec-support (3.4.1)
-    serverspec (2.29.1)
+    serverspec (2.30.0)
       multi_json
       rspec (~> 3.0)
       rspec-its
       specinfra (~> 2.48)
     sfl (2.2)
-    specinfra (2.50.2)
+    specinfra (2.52.0)
       net-scp
       net-ssh (>= 2.7, < 3.1)
       net-telnet

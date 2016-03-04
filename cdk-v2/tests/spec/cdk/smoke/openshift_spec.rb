@@ -33,8 +33,8 @@ end
 
 describe "OpenShift registry" do
   it "should be exposed" do
-    registry_get = command('sudo oc --config=/var/lib/origin/openshift.local.config/master/admin.kubeconfig get route/docker-registry').stdout
-    registry_get.should contain /hub.cdk.#{Regexp.quote(ENV['TARGET_IP'])}.xip.io/
+    registry_get = command('sudo oc --config=/var/lib/openshift/openshift.local.config/master/admin.kubeconfig get route/docker-registry').stdout
+    registry_get.should contain /hub.openshift.#{Regexp.quote(ENV['TARGET_IP'])}.xip.io/
   end
 end
 
