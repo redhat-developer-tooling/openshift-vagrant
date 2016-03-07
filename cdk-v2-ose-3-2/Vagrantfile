@@ -1,0 +1,129 @@
+  # -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Usage:
+#
+# To use this Vagrantfile:
+# * Have valid RH employee subscription account
+# * Be connected to the internal Red Hat network
+# * Have the 'vagrant-registration' plugin installed
+# * Have the 'vagrant-service-manager' plugin installed
+
+# General configuration:
+
+# URLs from where to fetch the Vagrant VirtualBox images
+# FIXME: How to point to the official box image?
+VAGRANT_VIRTUALBOX_URL='http://cdk-builds.usersys.redhat.com/builds/03-Mar-2016/rhel-7.2-server-kubernetes-vagrant-scratch-7.2-1.x86_64.vagrant-virtualbox.box'
+VAGRANT_LIBVIRT_URL='http://cdk-builds.usersys.redhat.com/builds/03-Mar-2016/rhel-7.2-server-kubernetes-vagrant-scratch-7.2-1.x86_64.vagrant-libvirt.box'
+
+# The IP address and hostname of the VM as exposed on the host.
+# Uses xip.io for now to have zero configuration routes
+PUBLIC_ADDRESS="10.2.2.2"
+REGISTRY_HOST="hub.openshift.#{PUBLIC_ADDRESS}.xip.io"
+
+# The amount of memory available to the VM
+VM_MEMORY = ENV['VM_MEMORY'] || 4096
+
+# Number of VM CPUs
+VM_CPU = ENV['VM_CPU'] || 2
+
+SUBSCRIPTION_INFO = "
+    Red Hat subscription credentials are needed for this VM.
+    You can supply them interactively or by setting environment variables.
+    Set these environment variables to your subscription username/password to avoid interactive registration:
+
+    $ export SUB_USERNAME=rhn-username
+    $ export SUB_PASSWORD=password
+  "
+
+NO_SERVICE_MANAGER_ERROR = "vagrant-service-manager plugin is not installed, run `vagrant plugin install vagrant-service-manager` to install the plugin."
+NO_VAGRANT_REGISTRATION_ERROR = "vagrant-registration plugin is not installed, run `vagrant plugin install vagrant-registration` to install the plugin."
+
+Vagrant.configure(2) do |config|
+
+  config.vm.define "cdk" do |cdk|
+      cdk.vm.provider "virtualbox" do |v, override|
+      	override.vm.box = "cdk_v2"
+        override.vm.box_url = "#{VAGRANT_VIRTUALBOX_URL}"
+        v.name = "openshift.cdk-2-ose-3-2"
+        v.memory = VM_MEMORY
+        v.cpus   = VM_CPU
+        v.customize ["modifyvm", :id, "--ioapic", "on"]
+        v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      end
+
+      cdk.vm.provider "libvirt" do |v, override|
+      	override.vm.box = "cdk_v2"
+        override.vm.box_url = "#{VAGRANT_LIBVIRT_URL}"
+        v.driver = "kvm"
+        v.memory = VM_MEMORY
+        v.cpus   = VM_CPU
+      end
+
+      cdk.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
+
+      unless Vagrant.has_plugin?("vagrant-service-manager")
+        raise Vagrant::Errors::VagrantError.new, NO_SERVICE_MANAGER_ERROR
+      end
+
+      unless Vagrant.has_plugin?('vagrant-registration')
+        raise Vagrant::Errors::VagrantError.new, NO_VAGRANT_REGISTRATION_ERROR
+      end
+
+      if ENV.has_key?('SUB_USERNAME') && ENV.has_key?('SUB_PASSWORD')
+        cdk.registration.username = ENV['SUB_USERNAME']
+        cdk.registration.password = ENV['SUB_PASSWORD']
+        cdk.registration.skip = true
+      end
+
+      case ARGV[0]
+      when "up", "halt"
+        if cdk.registration.username.nil? || cdk.registration.password.nil?
+          puts SUBSCRIPTION_INFO
+        end
+      end
+
+      cdk.vm.provision :shell, inline: <<-SHELL
+        /opt/adb/openshift/add_insecure_registry -ip #{REGISTRY_HOST}
+        /opt/adb/openshift/add_insecure_registry -ip brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888
+
+        # Enabling latest OSE 3.2 nightly build
+        sed -i.orig -e "s/ADD_REGISTRY=.*/ADD_REGISTRY='--add-registry registry.access.redhat.com --add-registry brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888'/g" /etc/sysconfig/docker
+        sed -i.orig -e "s@IMAGE=.*@IMAGE='brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888/openshift3/ose:v3.1.1.906'@g" /etc/sysconfig/openshift_option
+        systemctl restart docker
+
+        # Need to pull docker image explicitly
+        docker pull brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888/openshift3/ose:v3.1.1.906
+
+        # Enable and start OpenShift service
+        systemctl enable openshift
+        systemctl start openshift
+
+        # https://github.com/projectatomic/adb-utils/issues/32
+        export KUBECONFIG=/var/lib/openshift/openshift.local.config/master/admin.kubeconfig
+        oadm policy add-cluster-role-to-user cluster-admin admin
+
+      SHELL
+
+      cdk.vm.provision "shell", inline: <<-SHELL
+        echo
+        echo "Successfully started and provisioned VM with #{VM_CPU} cores and #{VM_MEMORY} MB of memory."
+        echo "To modify the number of cores and/or available memory set the environment variables"
+        echo "VM_CPU respectively VM_MEMORY."
+        echo
+        echo "You can now access the OpenShift console on: https://#{PUBLIC_ADDRESS}:8443/console"
+        echo
+        echo "To use OpenShift CLI, run:"
+        echo "$ vagrant ssh"
+        echo "$ oc login #{PUBLIC_ADDRESS}:8443"
+        echo
+        echo "Configured users are (<username>/<password>):"
+        echo "openshift-dev/devel"
+        echo "admin/admin"
+        echo
+        echo "If you have the oc client library on your host, you can also login from your host."
+        echo
+      SHELL
+    end
+end
+
