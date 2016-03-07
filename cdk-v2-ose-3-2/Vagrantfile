@@ -18,7 +18,7 @@ VAGRANT_LIBVIRT_URL='http://cdk-builds.usersys.redhat.com/builds/03-Mar-2016/rhe
 
 # The IP address and hostname of the VM as exposed on the host.
 # Uses xip.io for now to have zero configuration routes
-PUBLIC_ADDRESS="10.2.2.2"
+PUBLIC_ADDRESS="10.3.2.2"
 REGISTRY_HOST="hub.openshift.#{PUBLIC_ADDRESS}.xip.io"
 
 # The amount of memory available to the VM
