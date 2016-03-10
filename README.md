@@ -41,8 +41,8 @@ virtual machine:
 * [Vagrant](https://www.vagrantup.com/) installed
 * [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) _(>=1.2.1)_ installed
  * Run `vagrant plugin install vagrant-registration` to install plugin
-* [vagrant-service-manager plugin](https://github.com/projectatomic/vagrant-service-manager) _(>=0.0.2)_ installed
- * Run `vagrant plugin install vagrant-service-manager` to install plugin
+* [vagrant-service-manager plugin](https://github.com/projectatomic/vagrant-service-manager) _(=0.0.2)_ installed. Do not install 0.0.3 for now, due to a [bug](https://github.com/projectatomic/vagrant-service-manager/issues/95).
+ * Run `vagrant plugin install vagrant-service-manager --plugin-version 0.0.2` to install plugin
 * Optionally, the [OpenShift Client tools](https://github.com/openshift/origin/releases/) for your OS to run the `oc` commands from the terminal.
 * On Windows:
  * Ensure [Cygwin](https://www.cygwin.com/) is installed with rsync AND openssh. The default installation does not include these packages.
@@ -63,15 +63,11 @@ Provisioning steps which have already occurred will be skipped.
 <a name="how-to-access-the-vms-docker-daemon"></a>
 ## How to access the VM's Docker daemon
 
-Run `vagrant adbinfo`:
+Run `vagrant service-manager env docker`:
 
 ```
-$ eval "$(vagrant adbinfo)"
+$ eval "$(vagrant service-manager dev docker)"
 ```
-
-Due to an [issue](https://github.com/projectatomic/vagrant-adbinfo/issues/55) with adbinfo, the first execution of `vagrant adbinfo` will currently kill your OpenShift
-container. You need to run `vagrant provision` to restart the VM. This only occurs
-on the first call to _adbinfo_.
 
 <a name="how-to-access-the-openshift-registry"></a>
 ## How to access the OpenShift registry
@@ -183,7 +179,7 @@ To access the statistics use [http://10.1.2.2:1936/](http://10.1.2.2:1936).
 The username is '_admin_' and the password gets generated during the creation
 of the router pod. You can run the following to find the password:
 
-    $ eval "$(vagrant adbinfo)"
+    $ eval "$(vagrant service-manager env docker)"
     $ docker ps # You want the container id of the ose-haproxy-router container
     $ docker exec <container-id-of-router> less /var/lib/haproxy/conf/haproxy.config | grep "stats auth"
 
