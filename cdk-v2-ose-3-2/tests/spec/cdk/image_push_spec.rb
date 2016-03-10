@@ -5,8 +5,6 @@ require 'spec_helper'
 ###############################################################################
 
 describe "Pushing arbitrary docker image" do
-  # TODO - needs more work. The 'docker login' fails atm unless one first manually
-  # logs in once.
   let(:disable_sudo) { false }
   it "should work" do
     # Using Ghost as image to test. Pulled from Docker Hub
@@ -48,13 +46,13 @@ describe "Pushing arbitrary docker image" do
   end
 
   after do
-    # puts 'Cleaning up'
-    # out = command("docker rmi hub.openshift.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").stdout
-    # puts "#{out}"
-    # out = command('oc delete all --all').stdout
-    # puts "#{out}"
-    # out = command('oc delete project myproject').stdout
-    # puts "#{out}"
+    puts 'Cleaning up'
+    out = command("docker rmi hub.openshift.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").stdout
+    puts "#{out}"
+    out = command('oc delete all --all').stdout
+    puts "#{out}"
+    out = command('oc delete project myproject').stdout
+    puts "#{out}"
   end
 end
 

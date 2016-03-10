@@ -57,10 +57,14 @@ describe "Basic templates" do
   end
 end
 
-describe "Basic Node.js app" do
-  it "should build" do
-    command("oc --insecure-skip-tls-verify login #{ENV['TARGET_IP']}:8443 -u openshift-dev -p devel")
-    # TODO
-    command('oc logout')
+describe "OpenShift health URL" do
+  it "should respond ok" do
+    uri = URI.parse("https://#{ENV['TARGET_IP']}:8443/healthz/ready")
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    request = Net::HTTP::Get.new(uri.request_uri)
+    response = http.request(request)
+    response.code.should match /200/
   end
 end

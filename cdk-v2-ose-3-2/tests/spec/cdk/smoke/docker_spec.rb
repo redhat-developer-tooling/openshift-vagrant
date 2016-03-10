@@ -26,3 +26,11 @@ end
 describe command('docker ps --filter "name=k8s_router.*"') do
   its(:stdout) { should match /ose-haproxy-router/ }
 end
+
+describe command('docker pull alpine') do
+  its(:exit_status) { should eq 0 }
+end
+
+describe docker_image('alpine:latest') do
+  it { should exist }
+end
