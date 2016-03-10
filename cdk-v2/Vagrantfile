@@ -13,8 +13,8 @@
 
 # URLs from where to fetch the Vagrant VirtualBox images
 # FIXME: How to point to the official box image?
-VAGRANT_VIRTUALBOX_URL='http://cdk-builds.usersys.redhat.com/builds/03-Mar-2016/rhel-7.2-server-kubernetes-vagrant-scratch-7.2-1.x86_64.vagrant-virtualbox.box'
-VAGRANT_LIBVIRT_URL='http://cdk-builds.usersys.redhat.com/builds/03-Mar-2016/rhel-7.2-server-kubernetes-vagrant-scratch-7.2-1.x86_64.vagrant-libvirt.box'
+VAGRANT_VIRTUALBOX_URL='http://cdk-builds.usersys.redhat.com/builds/09-Mar-2016/rhel-cdk-kubernetes-7.2-21.x86_64.vagrant-virtualbox.box'
+VAGRANT_LIBVIRT_URL='http://cdk-builds.usersys.redhat.com/builds/09-Mar-2016/rhel-cdk-kubernetes-7.2-21.x86_64.vagrant-libvirt.box'
 
 # The IP address and hostname of the VM as exposed on the host.
 # Uses xip.io for now to have zero configuration routes
@@ -83,15 +83,8 @@ Vagrant.configure(2) do |config|
       end
 
       cdk.vm.provision :shell, inline: <<-SHELL
-        /opt/adb/openshift/add_insecure_registry -ip #{REGISTRY_HOST}
-
         systemctl enable openshift
         systemctl start openshift
-
-        # https://github.com/projectatomic/adb-utils/issues/32
-        export KUBECONFIG=/var/lib/openshift/openshift.local.config/master/admin.kubeconfig
-        oadm policy add-cluster-role-to-user cluster-admin admin
-
       SHELL
 
       cdk.vm.provision "shell", inline: <<-SHELL
