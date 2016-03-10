@@ -34,3 +34,15 @@ end
 describe docker_image('alpine:latest') do
   it { should exist }
 end
+
+describe x509_certificate('/etc/docker/server-cert.pem') do
+   let(:disable_sudo) { false }
+   it { should be_valid }
+end
+
+describe command('openssl x509 -text -noout -in /etc/docker/server-cert.pem') do
+  let(:disable_sudo) { false }
+  its(:stdout) { should match /IP Address:#{Regexp.quote(ENV['TARGET_IP'])}/ }
+end
+
+
