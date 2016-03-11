@@ -36,8 +36,13 @@ SUBSCRIPTION_INFO = "
     $ export SUB_PASSWORD=password
   "
 
-NO_SERVICE_MANAGER_ERROR = "vagrant-service-manager plugin is not installed, run `vagrant plugin install vagrant-service-manager` to install the plugin."
-NO_VAGRANT_REGISTRATION_ERROR = "vagrant-registration plugin is not installed, run `vagrant plugin install vagrant-registration` to install the plugin."
+REQUIRED_PLUGINS = %w(vagrant-service-manager vagrant-registration)
+message = ->(name) { "#{name} plugin is not installed, run `vagrant plugin install #{name}` to install it." }
+errors = []
+# Validate and collect error message if plugin is not installed
+REQUIRED_PLUGINS.each {|plugin| errors << message.call(plugin) unless Vagrant.has_plugin?(plugin) }
+msg = errors.size > 1 ? "Errors: \n* #{errors.join("\n* ")}" : "Error: #{errors.first}"
+raise Vagrant::Errors::VagrantError.new, msg unless errors.size == 0
 
 Vagrant.configure(2) do |config|
 
@@ -61,14 +66,6 @@ Vagrant.configure(2) do |config|
       end
 
       cdk.vm.network "private_network", ip: "#{PUBLIC_ADDRESS}"
-
-      unless Vagrant.has_plugin?("vagrant-service-manager")
-        raise Vagrant::Errors::VagrantError.new, NO_SERVICE_MANAGER_ERROR
-      end
-
-      unless Vagrant.has_plugin?('vagrant-registration')
-        raise Vagrant::Errors::VagrantError.new, NO_VAGRANT_REGISTRATION_ERROR
-      end
 
       if ENV.has_key?('SUB_USERNAME') && ENV.has_key?('SUB_PASSWORD')
         cdk.registration.username = ENV['SUB_USERNAME']
@@ -108,4 +105,3 @@ Vagrant.configure(2) do |config|
       SHELL
     end
 end
-
