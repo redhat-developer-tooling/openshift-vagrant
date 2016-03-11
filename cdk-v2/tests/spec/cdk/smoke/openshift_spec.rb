@@ -58,7 +58,7 @@ describe "Basic templates" do
 end
 
 describe "OpenShift health URL" do
-  it "should respond ok" do
+  it "should respond with response code 200" do
     uri = URI.parse("https://#{ENV['TARGET_IP']}:8443/healthz/ready")
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
@@ -67,4 +67,15 @@ describe "OpenShift health URL" do
     response = http.request(request)
     response.code.should match /200/
   end
+end
+
+describe file('/usr/bin/oc') do
+  it { should be_file }
+  it { should be_executable }
+end
+
+describe file('/usr/bin/oadm') do
+  it { should be_symlink }
+  it { should be_linked_to '/usr/bin/openshift' }
+  it { should be_executable }
 end
