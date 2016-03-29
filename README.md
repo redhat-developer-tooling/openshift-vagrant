@@ -66,7 +66,7 @@ Provisioning steps which have already occurred will be skipped.
 Run `vagrant service-manager env docker`:
 
 ```
-$ eval "$(vagrant service-manager dev docker)"
+$ eval "$(vagrant service-manager env docker)"
 ```
 
 <a name="how-to-access-the-openshift-registry"></a>
