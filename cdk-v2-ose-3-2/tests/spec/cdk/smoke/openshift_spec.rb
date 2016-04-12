@@ -34,7 +34,7 @@ end
 describe "OpenShift registry" do
   it "should be exposed" do
     registry_get = command('sudo oc --config=/var/lib/openshift/openshift.local.config/master/admin.kubeconfig get route/docker-registry').stdout
-    registry_get.should contain /hub.openshift.#{Regexp.quote(ENV['TARGET_IP'])}.xip.io/
+    registry_get.should contain /hub.openshift.rhel-cdk.#{Regexp.quote(ENV['TARGET_IP'])}.xip.io/
   end
 end
 
@@ -52,7 +52,8 @@ describe "Basic templates" do
     command("oc --insecure-skip-tls-verify login #{ENV['TARGET_IP']}:8443 -u admin -p admin")
     templates = command('oc --insecure-skip-tls-verify get templates -n openshift').stdout
     templates.should contain /eap64-basic-s2i/
-    templates.should contain /odejs-example/
+    templates.should contain /eap64-mysql-persistent-s2i/
+    templates.should contain /nodejs-example/
     command('oc logout')
   end
 end

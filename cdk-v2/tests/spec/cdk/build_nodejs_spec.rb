@@ -15,6 +15,7 @@ describe "Nodejs example app" do
 
     # Create the app
     command('oc new-app nodejs-example').exit_status.should be 0
+    sleep 5
 
     i = 0
     while i < 60
@@ -22,10 +23,10 @@ describe "Nodejs example app" do
         case state
         when "Pending"
             puts 'Pulling builder image'
-            sleep 5
+            sleep 10
         when "Running"
             puts 'Building app'
-            sleep 5
+            sleep 10
         when "Completed"
             # TODO give time to get the pod up, needs improvement
             puts 'Build complete. Waiting for pod to start'

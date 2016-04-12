@@ -13,13 +13,19 @@
 
 # URLs from where to fetch the Vagrant VirtualBox images
 # FIXME: How to point to the official box image?
-VAGRANT_VIRTUALBOX_URL='http://cdk-builds.usersys.redhat.com/builds/09-Mar-2016/rhel-cdk-kubernetes-7.2-21.x86_64.vagrant-virtualbox.box'
-VAGRANT_LIBVIRT_URL='http://cdk-builds.usersys.redhat.com/builds/09-Mar-2016/rhel-cdk-kubernetes-7.2-21.x86_64.vagrant-libvirt.box'
+VAGRANT_VIRTUALBOX_URL='http://cdk-builds.usersys.redhat.com/builds/weekly/13-Apr-2016.rc3/rhel-cdk-kubernetes-7.2-23.x86_64.vagrant-virtualbox.box'
+VAGRANT_LIBVIRT_URL='http://cdk-builds.usersys.redhat.com/builds/weekly/13-Apr-2016.rc3/rhel-cdk-kubernetes-7.2-23.x86_64.vagrant-libvirt.box'
 
 # The IP address and hostname of the VM as exposed on the host.
 # Uses xip.io for now to have zero configuration routes
 PUBLIC_ADDRESS="10.3.2.2"
-REGISTRY_HOST="hub.openshift.#{PUBLIC_ADDRESS}.xip.io"
+
+# The Docker registry from where we pull the OpenShift Docker image
+DOCKER_REGISTRY="brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888"
+
+# The name of the OpenShift image.
+IMAGE_NAME="openshift3/ose"
+IMAGE_TAG="v3.2.0.8"
 
 # The amount of memory available to the VM
 VM_MEMORY = ENV['VM_MEMORY'] || 4096
@@ -70,7 +76,9 @@ Vagrant.configure(2) do |config|
       if ENV.has_key?('SUB_USERNAME') && ENV.has_key?('SUB_PASSWORD')
         cdk.registration.username = ENV['SUB_USERNAME']
         cdk.registration.password = ENV['SUB_PASSWORD']
-        cdk.registration.skip = true
+        # After provisioning registration can be skipped as well as un-registering on halt
+        # cdk.registration.skip = true
+        # config.registration.unregister_on_halt = false
       end
 
       case ARGV[0]
@@ -80,21 +88,12 @@ Vagrant.configure(2) do |config|
         end
       end
 
+      # cdk.vm.synced_folder ENV['HOME'], ENV['HOME'], type: 'sshfs', sshfs_opts_append: '-o umask=000 -o uid=1000 -o gid=1000'
+
       cdk.vm.provision :shell, inline: <<-SHELL
-        /opt/adb/openshift/add_insecure_registry -ip brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888
-
-        # Enabling latest OSE 3.2 nightly build
         sed -i.orig -e "s/ADD_REGISTRY=.*/ADD_REGISTRY='--add-registry registry.access.redhat.com --add-registry brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888'/g" /etc/sysconfig/docker
-        sed -i.orig -e "s@IMAGE=.*@IMAGE='brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888/openshift3/ose:v3.1.1.906'@g" /etc/sysconfig/openshift_option
-        systemctl restart docker
-
-        # Need to pull docker image explicitly
-        docker pull brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888/openshift3/ose:v3.1.1.906
-
-        # Enable and start OpenShift service
-        systemctl enable openshift
-        systemctl start openshift
-
+        add_insecure_registry -r brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888
+        DOCKER_REGISTRY=#{DOCKER_REGISTRY} IMAGE_TAG=#{IMAGE_TAG} IMAGE_NAME=#{IMAGE_NAME} /usr/bin/sccli openshift
       SHELL
 
       cdk.vm.provision "shell", inline: <<-SHELL
@@ -118,4 +117,3 @@ Vagrant.configure(2) do |config|
       SHELL
     end
 end
-
