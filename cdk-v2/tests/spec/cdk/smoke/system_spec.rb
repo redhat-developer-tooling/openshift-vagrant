@@ -25,3 +25,7 @@ describe interface('docker0') do
   it { should be_up }
 end
 
+describe file(ENV['HOME']) do
+  it { should be_directory }
+end
+
