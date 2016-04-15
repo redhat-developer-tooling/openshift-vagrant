@@ -13,6 +13,7 @@
   - [Cluster admin](#cluster-admin)
 - [Known issues](#known-issues)
 - [Misc](#misc)
+  - [How to use persistent volumes claims](#how-to-use-persistent-volumes-claims)
   - [How to run _any_ image on OpenShift](#how-to-run-_any_-image-on-openshift)
   - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
   - [How to get HAProxy statistics](#how-to-get-haproxy-statistics)
@@ -27,7 +28,7 @@
 ## What is it?
 
 This repository contain a Vagrant setup to start a Vagrant virtual machine
-running a containerized version of OpenShift Enterprise using CDK 2 (Beta3).
+running a containerized version of OpenShift Enterprise using CDK 2.
 
 <a name="prerequisites"></a>
 ## Prerequisites
@@ -35,7 +36,7 @@ running a containerized version of OpenShift Enterprise using CDK 2 (Beta3).
 The following prerequisites need to be met prior to creating and provisioning the
 virtual machine:
 
-* __RHEL employee subscription credentials available__
+* __[developers.redhat.com](http://developers.redhat.com) or Red Hat employee subscription credentials__
 * __Active VPN connection during the creation and provisioning of the VM__
 * [VirtualBox](https://www.virtualbox.org/) installed
 * [Vagrant](https://www.vagrantup.com/) installed
@@ -58,14 +59,13 @@ virtual machine:
     $ vagrant up
 
 This will start and provision the VM, as well as start an all-in-One OpenShift
-Enterprise instance. There are currently no scripts to start/stop OpenShift.
-To restart OpenShift after an `vagrant halt`, run `vagrant up && vagrant provision`.
-Provisioning steps which have already occurred will be skipped.
+Enterprise instance.
 
 <a name="how-to-access-the-vms-docker-daemon"></a>
 ## How to access the VM's Docker daemon
 
-Run `vagrant service-manager env docker`:
+Run the following command in your shell to configure it to use Docker (you need
+the Docker CLI binaries installed):
 
 ```
 $ eval "$(vagrant service-manager env docker)"
@@ -75,10 +75,11 @@ $ eval "$(vagrant service-manager env docker)"
 ## How to access the OpenShift registry
 
 The OpenShift registry is per default exposed as _hub.openshift.10.1.2.2.xip.io_. You can
-push to this registry directly after logging in. Assuming one logs in as user 'foo':
+push to this registry directly after logging in. Assuming one logs in as
+the defaultuser 'openshift-dev':
 
-    $ oc login 10.1.2.2:8443
-    $ docker login -u foo -p `oc whoami -t` -e foo@bar.com hub.openshift.10.1.2.2.xip.io
+    $ oc login 10.1.2.2:8443 -u openshift-dev -p devel
+    $ docker login -u openshift-dev -p `oc whoami -t` -e foo@bar.com hub.openshift.rhel-cdk.10.1.2.2.xip.io
 
 <a name="openshift-logins"></a>
 ## OpenShift Logins
@@ -112,8 +113,7 @@ Alternatively you can set the _KUBECONFIG_ environment variable and skip the _--
     $ export KUBECONFIG=/var/lib/origin/openshift.local.config/master/admin.kubeconfig
 
 However, be careful that when you in this case login as a different user, OpenShift
-will attempt to overwrite _admin.kubeconfig_. Probably better to just define an
-alias.
+will attempt to overwrite _admin.kubeconfig_.
 
 <a name="known-issues"></a>
 ## Known issues
@@ -124,31 +124,82 @@ alias.
 <a name="misc"></a>
 ## Misc
 
+<a name="how-to-use-persistent-volumes-claims"></a>
+### How to use persistent volumes claims
+
+The CDK provides a three persistent volumnes to experiment with. You can view them
+as admin as so:
+
+    $ oc login -u admin -p password
+    $ oc get pv
+    NAME      LABELS    CAPACITY   ACCESSMODES   STATUS      CLAIM     REASON    AGE
+    pv01      <none>    1Gi        RWO,RWX       Available                       6h
+    pv02      <none>    2Gi        RWO,RWX       Available                       6h
+    pv03      <none>    3Gi        RWO,RWX       Available                       6h
+
+To make a claim, you can do the following:
+
+    # Using the openshift-dev user
+    $ oc login -u openshift-dev -p devel
+
+    # Using Nodejs as example app
+    $ oc new-app https://github.com/openshift/nodejs-ex -l name=nodejs
+    # Wait for build to complete ...
+    $ oc expose service nodejs-ex -l name=nodejs
+
+    # Make the persistent volume claim
+    $ oc volume dc/nodejs-ex --add --claim-size 512M --mount-path  /opt/app-root/src/views --name views
+    persistentvolumeclaims/pvc-evu2v
+    deploymentconfigs/nodejs-ex
+
+    # Check the persistent volume claim
+    oc get pvc
+    NAME        LABELS    STATUS    VOLUME    CAPACITY   ACCESSMODES   AGE
+    pvc-evu2v   <none>    Bound     pv01      1Gi        RWO,RWX       1m
+
+    # create some sample file
+    $ echo '<html><body><h1>It works!</h1></body></html>' > /nfsvolumes/pv01/index.html
+
+    # Brose to http://nodejs-ex-sample-project.rhel-cdk.10.1.2.2.xip.io/
+
+    # Verfify content on file system
+    $ vagrant ssh
+    $ ls -l /nfsvolumes/pv01
+
+    # All app of the same app share the same volume
+    $ oc scale dc/nodejs-ex --replicas 5
+    $ oc get pods
+    NAME                READY     STATUS      RESTARTS   AGE
+    nodejs-ex-1-build   0/1       Completed   0          41m
+    nodejs-ex-6-2hs75   1/1       Running     0          15m
+    nodejs-ex-6-f576b   1/1       Running     0          1m
+    nodejs-ex-6-fboe9   1/1       Running     0          1m
+    nodejs-ex-6-ldaq1   1/1       Running     0          1m
+    nodejs-ex-6-norrq   1/1       Running     0          1m
+
+    $ oc exec -it nodejs-ex-6-norrq sh
+    $ cat views/index.html
+
 <a name="how-to-run-_any_-image-on-openshift"></a>
 ### How to run _any_ image on OpenShift
 
-Assuming a user _foo_, you can do the following to run for example
+Assuming user _openshift-dev_, you can do the following to run for example
 the Node.js based blogging framework [Ghost](https://ghost.org/).
 
-    $ oc login 10.1.2.2:8443
-    Authentication required for https://10.1.2.2:8443 (openshift)
-    Username: foo
-    Password:
+    $ oc login 10.1.2.2:8443 -u openshift-dev -p devel
     Login successful.
 
     $ oc new-project my-ghost
     Now using project "my-ghost" on server "https://10.1.2.2:8443".
 
     $ docker pull ghost
-    $ docker tag ghost hub.openshift.10.1.2.2.xip.io/my-ghost/ghost
-    $ docker login -u foo -p `oc whoami -t` -e foo@bar.com hub.openshift.10.1.2.2.xip.io
-    $ docker push hub.openshift.10.1.2.2.xip.io/my-ghost/ghost
+    $ docker tag ghost hub.openshift.rhel-cdk.10.1.2.2.xip.io/my-ghost/ghost
+    $ docker login -u openshift-dev -p `oc whoami -t` -e foo@bar.com hub.openshift.rhel-cdk.10.1.2.2.xip.io
+    $ docker push hub.openshift.rhel-cdk.10.1.2.2.xip.io/my-ghost/ghost
     $ oc new-app --image-stream=ghost --name=ghost
-    $ oc expose service ghost --hostname=my-ghost-blog.10.1.2.2.xip.io
+    $ oc expose service ghost --hostname=my-ghost-blog.rhel-cdk.10.1.2.2.xip.io
 
-Then visit http://my-ghost-blog.10.1.2.2.xip.io/ with your browser.
-
-
+Then visit http://my-ghost-blog.rhel-cdk.10.1.2.2.xip.io/ with your browser.
 
 <a name="how-to-sync-an-existing-openshift-project"></a>
 ### How to sync an existing OpenShift project
