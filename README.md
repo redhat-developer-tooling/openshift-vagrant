@@ -8,19 +8,20 @@
 - [How to access the VM's Docker daemon](#how-to-access-the-vms-docker-daemon)
 - [How to access the OpenShift registry](#how-to-access-the-openshift-registry)
 - [OpenShift Logins](#openshift-logins)
-  - [Regular users](#regular-users)
-  - [admin](#admin)
-  - [Cluster admin](#cluster-admin)
+    - [Regular users](#regular-users)
+    - [admin](#admin)
+    - [Cluster admin](#cluster-admin)
 - [Known issues](#known-issues)
 - [Misc](#misc)
-  - [How to use persistent volumes claims](#how-to-use-persistent-volumes-claims)
-  - [How to run _any_ image on OpenShift](#how-to-run-_any_-image-on-openshift)
-  - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
-  - [How to get HAProxy statistics](#how-to-get-haproxy-statistics)
-  - [How to test webhooks locally](#how-to-test-webhooks-locally)
-  - [How to debug EAP image](#how-to-debug-eap-image)
-  - [How to find cause of container startup failure](#how-to-find-cause-of-container-startup-failure)
-  - [How to explore the OpenShift REST API](#how-to-explore-the-openshift-rest-api)
+    - [How to use Landrush](#how-to-use-landrush)
+    - [How to use persistent volumes claims](#how-to-use-persistent-volumes-claims)
+    - [How to run _any_ image on OpenShift](#how-to-run-_any_-image-on-openshift)
+    - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
+    - [How to get HAProxy statistics](#how-to-get-haproxy-statistics)
+    - [How to test webhooks locally](#how-to-test-webhooks-locally)
+    - [How to debug EAP image](#how-to-debug-eap-image)
+    - [How to find cause of container startup failure](#how-to-find-cause-of-container-startup-failure)
+    - [How to explore the OpenShift REST API](#how-to-explore-the-openshift-rest-api)
 
 <!-- /MarkdownTOC -->
 
@@ -123,6 +124,21 @@ will attempt to overwrite _admin.kubeconfig_.
 
 <a name="misc"></a>
 ## Misc
+
+<a name="how-to-use-landrush"></a>
+### How to use Landrush
+
+NOTE: Not working on Windows for now unless you build Landrush from source!
+
+Set the environment variable `OPENSHIFT_VAGRANT_USE_LANDRUSH`
+
+    $ cd cdk-v2
+    $ export SUB_USERNAME=<your-subscription-username>
+    $ export SUB_PASSWORD=<your-subscription-password>
+    $ export OPENSHIFT_VAGRANT_USE_LANDRUSH=true
+    $ vagrant up
+
+The generated routes will then use _openshift.cdk_ as TLD instead of _10.1.2.2.xip.io_.
 
 <a name="how-to-use-persistent-volumes-claims"></a>
 ### How to use persistent volumes claims
