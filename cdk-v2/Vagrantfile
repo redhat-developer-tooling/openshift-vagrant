@@ -27,6 +27,13 @@ VM_MEMORY = ENV['VM_MEMORY'] || 3072
 # Number of VM CPUs
 VM_CPU = ENV['VM_CPU'] || 2
 
+# The Docker registry from where we pull the OpenShift Docker image
+DOCKER_REGISTRY="brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888"
+
+# The name of the OpenShift image.
+IMAGE_NAME="openshift3/ose"
+IMAGE_TAG="v3.2.0.8"
+
 SUBSCRIPTION_INFO = "
     Red Hat subscription credentials are needed for this VM.
     You can supply them interactively or by setting environment variables.
@@ -101,6 +108,15 @@ Vagrant.configure(2) do |config|
         cdk.landrush.host tld, "#{PUBLIC_ADDRESS}"
         cdk.vm.provision :shell, inline: <<-SHELL
           sed -i.orig -e "s/OPENSHIFT_SUBDOMAIN=.*/OPENSHIFT_SUBDOMAIN='#{tld}'/g" /etc/sysconfig/openshift_option
+        SHELL
+      end
+
+      # Set OPENSHIFT_VAGRANT_USE_OSE_3_2=true in your shell to use OSE 3.2 instead of 3.1
+      if ENV.fetch('OPENSHIFT_VAGRANT_USE_OSE_3_2', 'false').to_s.downcase == 'true'
+        cdk.vm.provision :shell, inline: <<-SHELL
+          sed -i.orig -e "s/ADD_REGISTRY=.*/ADD_REGISTRY='--add-registry registry.access.redhat.com --add-registry brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888'/g" /etc/sysconfig/docker
+          add_insecure_registry -r brew-pulp-docker01.web.prod.ext.phx2.redhat.com:8888
+          DOCKER_REGISTRY=#{DOCKER_REGISTRY} IMAGE_TAG=#{IMAGE_TAG} IMAGE_NAME=#{IMAGE_NAME} /usr/bin/sccli openshift
         SHELL
       end
 
