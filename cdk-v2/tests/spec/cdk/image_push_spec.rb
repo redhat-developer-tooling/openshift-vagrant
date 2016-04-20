@@ -6,34 +6,26 @@ require 'spec_helper'
 
 describe "Pushing arbitrary docker image" do
   let(:disable_sudo) { false }
-  it "should work" do
+  it "should succeed" do
     # Using Ghost as image to test. Pulled from Docker Hub
-    exit = command('docker pull ghost').exit_status
-    exit.should be 0
+    command('docker pull ghost').exit_status.should be 0
 
     # We need a project to "host" our image
-    exit = command("oc --insecure-skip-tls-verify login #{ENV['TARGET_IP']}:8443 -u openshift-dev -p devel").exit_status
-    exit.should be 0
-    exit = command('oc new-project myproject').exit_status
-    exit.should be 0
+    command("oc --insecure-skip-tls-verify login #{ENV['TARGET_IP']}:8443 -u openshift-dev -p devel").exit_status.should be 0
+    command('oc new-project myproject').exit_status.should be 0
     token = command('oc whoami -t').stdout
 
     # 1 - Tag the image against the exposed OpenShift registry using the created project name as target
     # 2 - Log into the Docker registry
     # 3 - Push the image
-    exit = command("docker tag -f ghost hub.openshift.rhel-cdk.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").exit_status
-    exit.should be 0
-    exit = command("docker login -u openshift-dev -p '#{token}' -e foo@bar.com hub.openshift.rhel-cdk.#{ENV['TARGET_IP']}.xip.io").exit_status
-    exit.should be 0
-    exit = command("docker push hub.openshift.rhel-cdk.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").exit_status
-    exit.should be 0
+    command("docker tag -f ghost hub.openshift.rhel-cdk.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").exit_status.should be 0
+    command("docker login -u openshift-dev -p '#{token}' -e foo@bar.com hub.openshift.rhel-cdk.#{ENV['TARGET_IP']}.xip.io").exit_status.should be 0
+    command("docker push hub.openshift.rhel-cdk.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").exit_status.should be 0
 
     # 1 - Create the app from the image stream created by pusing the image
     # 2 - Expose a route to the app
-    exit = command('oc new-app --image-stream=ghost --name=ghost').exit_status
-    exit.should be 0
-    exit = command("oc expose service ghost --hostname=ghost.#{ENV['TARGET_IP']}.xip.io").exit_status
-    exit.should be 0
+    command('oc new-app --image-stream=ghost --name=ghost').exit_status.should be 0
+    command("oc expose service ghost --hostname=ghost.#{ENV['TARGET_IP']}.xip.io").exit_status.should be 0
     # TODO - instead of sleep we should use oc to monitor the state of the pod until running
     sleep 60
 
@@ -46,13 +38,11 @@ describe "Pushing arbitrary docker image" do
   end
 
   after do
-    puts 'Cleaning up'
-    out = command("docker rmi hub.openshift.rhel-cdk.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").stdout
-    puts "#{out}"
-    out = command('oc delete all --all').stdout
-    puts "#{out}"
-    out = command('oc delete project myproject').stdout
-    puts "#{out}"
+    command("docker rmi hub.openshift.rhel-cdk.#{ENV['TARGET_IP']}.xip.io/myproject/ghost").exit_status.should be 0
+    command('oc delete all --all').exit_status.should be 0
+    command('oc delete project myproject').exit_status.should be 0
+    command('oc logout').exit_status.should be 0
+    command('rm /home/vagrant/.docker/config.json').exit_status.should be 0
   end
 end
 
