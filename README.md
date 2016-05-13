@@ -15,6 +15,7 @@
 - [Misc](#misc)
     - [How to use Landrush](#how-to-use-landrush)
     - [How to use OSE 3.2](#how-to-use-ose-32)
+    - [How to use Fabric8](#how-to-use-fabric8)
     - [How to use persistent volumes claims](#how-to-use-persistent-volumes-claims)
     - [How to run _any_ image on OpenShift](#how-to-run-_any_-image-on-openshift)
     - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
@@ -151,6 +152,34 @@ Set the environment variable `OPENSHIFT_VAGRANT_USE_OSE_3_2`
     $ export SUB_PASSWORD=<your-subscription-password>
     $ export OPENSHIFT_VAGRANT_USE_OSE_3_2=true
     $ vagrant up
+
+<a name="how-to-use-fabric8"></a>
+### How to use Fabric8
+
+If you wish to use the [fabric8 microservices platform]() with your CDK installation then ensure you have at least version 3.2 of OSE (see above).
+
+Now download and install [gofabric8](https://github.com/fabric8io/gofabric8/releases) and ensure its on your `$PATH`.
+
+You will probably want to login so you can use the `oc` command line tool from OpenShift:
+```
+oc login 10.1.2.2:8443 -u=admin -p=admin
+```
+
+Now install fabric8 via:
+```
+gofabric8 deploy -y --domain=openshift.10.1.2.2.xip.io
+gofabric8 secrets -y
+```
+It will take a few moments to startup and download the [Fabric8 Developer Console](http://fabric8.io/guide/console.html), you should see the pod startup in the OpenShift console or via the commmand:
+```
+oc get pods -w
+```
+
+Now that the fabric8 console is up and running you should be able to access it at: http://fabric8.openshift.10.1.2.2.xip.io/
+
+From there you should be able to start running apps and having fun! :) 
+
+There is [full instructions here](http://fabric8.io/guide/getStarted/cdk.html)
 
 <a name="how-to-use-persistent-volumes-claims"></a>
 ### How to use persistent volumes claims
