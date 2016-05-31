@@ -7,10 +7,6 @@ require 'uri'
 ###############################################################################
 
 describe service('openshift') do
-  it { should be_enabled }
-end
-
-describe service('openshift') do
   it { should be_running }
 end
 
