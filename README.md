@@ -14,7 +14,6 @@
 - [Known issues](#known-issues)
 - [Misc](#misc)
     - [How to use Landrush](#how-to-use-landrush)
-    - [How to use OSE 3.2](#how-to-use-ose-32)
     - [How to use persistent volumes claims](#how-to-use-persistent-volumes-claims)
     - [How to run _any_ image on OpenShift](#how-to-run-_any_-image-on-openshift)
     - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
@@ -30,7 +29,7 @@
 ## What is it?
 
 This repository contain a Vagrant setup to start a Vagrant virtual machine
-running a containerized version of OpenShift Enterprise using CDK 2.
+running a containerized version of OpenShift Enterprise 3.2 using CDK 2.
 
 <a name="prerequisites"></a>
 ## Prerequisites
@@ -44,8 +43,8 @@ virtual machine:
 * [Vagrant](https://www.vagrantup.com/) installed
 * [vagrant-registration plugin](https://github.com/projectatomic/adb-vagrant-registration) _(>=1.2.1)_ installed
  * Run `vagrant plugin install vagrant-registration` to install plugin
-* [vagrant-service-manager plugin](https://github.com/projectatomic/vagrant-service-manager) _(>=1.0.1)_ installed.
- * Run `vagrant plugin install vagrant-service-manager` to install plugin
+* [vagrant-service-manager plugin](https://github.com/projectatomic/vagrant-service-manager) _(>=1.1.0.beta.1)_ installed.
+ * Run `vagrant plugin install vagrant-service-manager --plugin-version 1.1.0.beta.1` to install plugin
 * [vagrant-sshfs plugin](https://github.com/dustymabe/vagrant-sshfs) _(>=1.1.0)_ installed
  * Run `vagrant plugin install vagrant-sshfs` to install plugin
 * Optionally, the [OpenShift Client tools](https://github.com/openshift/origin/releases/) for your OS to run the `oc` commands from the terminal.
@@ -140,17 +139,6 @@ Set the environment variable `OPENSHIFT_VAGRANT_USE_LANDRUSH`
     $ vagrant up
 
 The generated routes will then use _openshift.cdk_ as TLD instead of _10.1.2.2.xip.io_.
-
-<a name="how-to-use-ose-32"></a>
-### How to use OSE 3.2
-
-Set the environment variable `OPENSHIFT_VAGRANT_USE_OSE_3_2`
-
-    $ cd cdk-v2
-    $ export SUB_USERNAME=<your-subscription-username>
-    $ export SUB_PASSWORD=<your-subscription-password>
-    $ export OPENSHIFT_VAGRANT_USE_OSE_3_2=true
-    $ vagrant up
 
 <a name="how-to-use-persistent-volumes-claims"></a>
 ### How to use persistent volumes claims
