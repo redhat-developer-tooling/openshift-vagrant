@@ -111,6 +111,17 @@ Vagrant.configure(2) do |config|
         SHELL
       end
 
+      if ENV.fetch('INSTALL_FABRIC8', 'false').to_s.downcase == 'true'
+        cdk.vm.provision "shell", inline: <<-SHELL
+        mkdir fabric8 && cd fabric8
+        curl -L -O https://github.com/fabric8io/gofabric8/releases/download/v0.4.27/gofabric8-0.4.27-linux-amd64.tar.gz
+        tar -xvzf gofabric8-0.4.27-linux-amd64.tar.gz
+        oc login --insecure-skip-tls-verify=true #{PUBLIC_ADDRESS}:8443 -u=admin -p=admin
+        ./gofabric8 deploy -y --domain=openshift.#{PUBLIC_ADDRESS}.xip.io
+        ./gofabric8 secrets -y
+        SHELL
+      end
+
       cdk.vm.provision "shell", inline: <<-SHELL
         echo
         echo "Successfully started and provisioned VM with #{VM_CPU} cores and #{VM_MEMORY} MB of memory."

@@ -14,6 +14,7 @@
 - [Known issues](#known-issues)
 - [Misc](#misc)
     - [How to use Landrush](#how-to-use-landrush)
+    - [How to use Fabric8](#how-to-use-fabric8)
     - [How to use persistent volumes claims](#how-to-use-persistent-volumes-claims)
     - [How to run _any_ image on OpenShift](#how-to-run-_any_-image-on-openshift)
     - [How to sync an existing OpenShift project](#how-to-sync-an-existing-openshift-project)
@@ -139,6 +140,23 @@ Set the environment variable `OPENSHIFT_VAGRANT_USE_LANDRUSH`
     $ vagrant up
 
 The generated routes will then use _openshift.cdk_ as TLD instead of _10.1.2.2.xip.io_.
+
+<a name="how-to-use-fabric8"></a>
+### How to use Fabric8
+
+Set the environment variable `INSTALL_FABRIC`
+
+    $ cd cdk-v2
+    $ export SUB_USERNAME=<your-subscription-username>
+    $ export SUB_PASSWORD=<your-subscription-password>
+    $ export INSTALL_FABRIC8=true
+    $ vagrant up
+
+This will install and run [gofabric8](https://github.com/fabric8io/gofabric8/releases).
+After the Fabric8 pod is successfully running the Fabric8 console can be accessed
+via http://fabric8.openshift.10.1.2.2.xip.io/. Log in as admin and checkout
+the [Fabric8 Getting Started](http://fabric8.io/guide/getStarted/cdk.html)
+guide for your first steps.
 
 <a name="how-to-use-persistent-volumes-claims"></a>
 ### How to use persistent volumes claims
